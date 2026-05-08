@@ -359,7 +359,7 @@ const NON_BUTTON = true; // Implement a switch to on/off this feature...
 socket.buttonMessage = async (jid, msgData, quotemek) => {
 
 if (!NON_BUTTON) {
-          await conn.sendMessage(jid, msgData);
+          await socket.sendMessage(jid, msgData);
         } else {
 
 let result = "";
