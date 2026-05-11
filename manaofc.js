@@ -63,7 +63,7 @@ if (process.env.GITHUB_TOKEN) {
     });
 }
 const owner = "manaofc";
-const repo = "";
+const repo = "manaofc-lite";
 
 // Memory optimization: Use weak references for sockets
 const activeSockets = new Map();
