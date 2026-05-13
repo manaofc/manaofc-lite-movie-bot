@@ -1657,6 +1657,80 @@ await socket.sendMessage(from , { text:  mesaj }, { quoted: mek } )
 })
 
          /////////////////
+  ////// CONVART COMMAND //////
+  //.   //////////////////
+  
+cmd({
+    pattern: "imgbb",
+    react: "🖇",
+    desc: "Upload image to imgbb and get direct link",
+    category: "convert",
+    use: ".imgbb (reply to image)",
+    filename: __filename
+}, async (socket, mek, m, { from, q, reply }) => {
+    try {
+
+        // 🔑 Your IMGBB API KEY
+        const API_KEY = "cbcd92dd23fdcd54a15d4eb0e62a0308";
+
+        // Get quoted message (reply image)
+        const quoted = m.quoted ? m.quoted : m;
+        const mime = (quoted.msg || quoted).mimetype || "";
+
+        // Check if it's an image
+        if (!mime.startsWith("image")) {
+            return reply("❌ Please reply to an image.");
+        }
+
+        // Download image buffer
+        const buffer = await quoted.download();
+
+        if (!buffer) {
+            return reply("❌ Failed to download image.");
+        }
+
+        // Convert image to base64
+        const base64Image = buffer.toString("base64");
+
+        // Prepare form data
+        const form = new FormData();
+        form.append("image", base64Image);
+
+        // Upload to IMGBB
+        const response = await axios.post(
+            `https://api.imgbb.com/1/upload?key=${API_KEY}`,
+            form,
+            {
+                headers: form.getHeaders()
+            }
+        );
+
+        const data = response.data;
+
+        // Check success
+        if (!data || !data.success) {
+            return reply("❌ Image upload failed.");
+        }
+
+        // Extract URLs
+        const imageUrl = data.data.url;
+        const viewerUrl = data.data.url_viewer;
+        const deleteUrl = data.data.delete_url;
+
+        // Reply result
+        return reply(
+            `✅ *Image Uploaded Successfully!*\n\n` +
+            `🔗 Direct URL:\n${imageUrl}\n\n` +
+            `🌐 Viewer URL:\n${viewerUrl}\n\n` +
+            `🗑 Delete URL:\n${deleteUrl}`
+        );
+
+    } catch (error) {
+        console.error(error);
+        reply("❌ Error: " + error.message);
+    }
+});
+         /////////////////
 ///////// LOGO COMMAND ////////
       /////////////////
 
