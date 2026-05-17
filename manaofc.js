@@ -2441,8 +2441,6 @@ async (socket, mek, m, { from, reply }) => {
               ///////////////////
 ////////////// MOVIE COMMAND ////////////////
             ////////////////////
-
-
   cmd(
   {
     pattern: "cinesubz",
@@ -2454,22 +2452,19 @@ async (socket, mek, m, { from, reply }) => {
   },
   async (socket, mek, m, { from, prefix, q, reply }) => {
     try {
-      if (!q) return reply("Please give a movie name!");
+      if (!q) return reply("❌ Please give a movie name!");
 
-      // SEARCH MOVIE
-      const res = await fetch(
-        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-search?q=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
-      );
+      const res = await fetch(`https://api-dark-shan-yt.koyeb.app/movie/cinesubz-search?q=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`);
 
       const json = await res.json();
 
-      if (!json.status || !json.data.length) {
-        return reply("Movie not found!");
+      if (!json.status || !json.data || json.data.length === 0) {
+        return reply("❌ Movie not found!");
       }
 
       const data = json.data;
 
-      // CREATE BUTTONS
+      // BUTTONS
       const rows = data.slice(0, 10).map((v, i) => ({
         buttonId: `${prefix}cinfo ${v.link}`,
         buttonText: {
@@ -2480,16 +2475,16 @@ async (socket, mek, m, { from, reply }) => {
 
       const buttonMessage = {
         image: data[0].image,
-        caption: `🎬 *CineSubz Search Results*`,
+        caption: `🎬 *CineSubz Search Results*\n\n📌 Result Count: ${data.length}`,
         footer: "> _*Powered By Manaofc*_",
         buttons: rows,
         headerType: 4,
       };
 
-      return await socket.buttonMessage(from, buttonMessage, mek);
+      await socket.sendMessage(from, buttonMessage, { quoted: mek });
     } catch (e) {
       console.error(e);
-      reply("*ERROR !!*");
+      reply("❌ ERROR!");
     }
   }
 );
@@ -2505,28 +2500,28 @@ cmd(
   },
   async (socket, mek, m, { from, prefix, q, reply }) => {
     try {
-      if (!q) return reply("Need movie URL!");
+      if (!q) return reply("❌ Need movie URL!");
 
-      // MOVIE INFO
-      const res = await fetch(
-        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-info?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
-      );
+      const res = await fetch(`https://api-dark-shan-yt.koyeb.app/movie/cinesubz-info?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`);
 
       const json = await res.json();
 
-      if (!json.status) return reply("Movie info not found!");
+      if (!json.status || !json.data) {
+        return reply("❌ Movie info not found!");
+      }
 
       const movie = json.data;
 
       let desc = `🎬 *${movie.title}*\n\n`;
-      desc += `⭐ Rating: ${movie.rating}\n`;
-      desc += `📅 Year: ${movie.year}\n`;
-      desc += `⏱ Duration: ${movie.duration}\n`;
-      desc += `🎞 Quality: ${movie.quality}\n`;
-      desc += `🌍 Language: ${movie.tag}\n\n`;
+      desc += `⭐ Rating: ${movie.rating || "N/A"}\n`;
+      desc += `📅 Year: ${movie.year || "N/A"}\n`;
+      desc += `⏱ Duration: ${movie.duration || "N/A"}\n`;
+      desc += `🎞 Quality: ${movie.quality || "N/A"}\n`;
+      desc += `🌍 Language: ${movie.tag || "N/A"}\n\n`;
+      desc += `📥 *Select Download Quality Below*`;
 
-      const buttons = movie.downloads.map((d, i) => ({
-        buttonId: `${prefix}download ${d.link)}`,
+      const buttons = movie.downloads.slice(0, 10).map((d) => ({
+        buttonId: `${prefix}download ${d.link}`,
         buttonText: {
           displayText: `${d.quality} (${d.size})`,
         },
@@ -2541,10 +2536,10 @@ cmd(
         headerType: 4,
       };
 
-      return await socket.buttonMessage(from, buttonMessage, mek);
+      await socket.sendMessage(from, buttonMessage, { quoted: mek });
     } catch (e) {
       console.error(e);
-      reply("*ERROR !!*");
+      reply("❌ ERROR!");
     }
   }
 );
@@ -2560,29 +2555,33 @@ cmd(
   },
   async (socket, mek, m, { from, q, reply }) => {
     try {
-      if (!q) return reply("Need download URL!");
+      if (!q) return reply("❌ Need download URL!");
 
-      const res = await fetch(
-        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-download?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
-      );
+      const res = await fetch(`https://api-dark-shan-yt.koyeb.app/movie/cinesubz-download?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`);
 
       const json = await res.json();
 
-      if (!json.status) return reply("Download failed!");
+      if (!json.status || !json.data) {
+        return reply("❌ Download failed!");
+      }
 
       const data = json.data;
 
-      // GET DIRECT LINK
+      // DIRECT LINK
       const direct =
-        data.download.find(v => v.name === "unknown") ||
+        data.download.find((v) => v.name === "unknown") ||
         data.download[0];
 
+      if (!direct?.url) {
+        return reply("❌ Direct download link not found!");
+      }
+
       let txt = `📥 *Download Ready*\n\n`;
-      txt += `🎬 ${data.title}\n`;
+      txt += `🎬 Title: ${data.title}\n`;
       txt += `💾 Size: ${data.size}\n\n`;
       txt += `🔗 ${direct.url}`;
 
-      reply(txt);
+      await reply(txt);
 
       // SEND FILE
       await socket.sendMessage(
@@ -2597,7 +2596,7 @@ cmd(
       );
     } catch (e) {
       console.error(e);
-      reply("*ERROR !!*");
+      reply("❌ ERROR!");
     }
   }
 );
