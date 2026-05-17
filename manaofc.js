@@ -2471,7 +2471,7 @@ async (socket, mek, m, { from, reply }) => {
 
       // CREATE BUTTONS
       const rows = data.slice(0, 10).map((v, i) => ({
-        buttonId: `${prefix}cinfo ${encodeURIComponent(v.link)}`,
+        buttonId: `${prefix}cinfo ${v.link}`,
         buttonText: {
           displayText: `${i + 1}. ${v.title.substring(0, 40)}`,
         },
@@ -2480,7 +2480,7 @@ async (socket, mek, m, { from, reply }) => {
 
       const buttonMessage = {
         image: data[0].image,
-        caption: `🎬 *CineSubz Search Results*\n\nQuery: ${q}\n\nSelect a movie below`,
+        caption: `🎬 *CineSubz Search Results*`,
         footer: "> _*Powered By Manaofc*_",
         buttons: rows,
         headerType: 4,
@@ -2503,7 +2503,7 @@ cmd(
     dontAddCommandList: true,
     filename: __filename,
   },
-  async (socket, mek, m, { from, q, reply }) => {
+  async (socket, mek, m, { from, prefix, q, reply }) => {
     try {
       if (!q) return reply("Need movie URL!");
 
@@ -2524,10 +2524,9 @@ cmd(
       desc += `⏱ Duration: ${movie.duration}\n`;
       desc += `🎞 Quality: ${movie.quality}\n`;
       desc += `🌍 Language: ${movie.tag}\n\n`;
-      desc += `📥 *Downloads*\n\n`;
 
       const buttons = movie.downloads.map((d, i) => ({
-        buttonId: `.download ${encodeURIComponent(d.link)}`,
+        buttonId: `${prefix}download ${d.link)}`,
         buttonText: {
           displayText: `${d.quality} (${d.size})`,
         },
