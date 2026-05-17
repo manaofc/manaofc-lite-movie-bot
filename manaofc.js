@@ -2628,7 +2628,8 @@ setInterval(() => {
         }
     }
 }, 10000);
-    
+
+}
 //========================    
 // Memory optimization: Throttle message handlers
 function setupMessageHandlers(socket, userConfig) {
