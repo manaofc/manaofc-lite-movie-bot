@@ -2474,8 +2474,8 @@ async (socket, mek, m, { from, reply }) => {
       }));
 
       const buttonMessage = {
-        image: data[0].image,
-        caption: `🎬 *CineSubz Search Results*\n\n📌 Result Count: ${data.length}`,
+        image: defaultConfig.IMAGE_PATH,
+        caption: `*MANAOFC LITE CINESUBZ DOWNLOAD 🎬*`,
         footer: "> _*Powered By Manaofc*_",
         buttons: rows,
         headerType: 4,
