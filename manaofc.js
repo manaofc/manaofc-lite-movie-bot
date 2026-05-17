@@ -2534,15 +2534,15 @@ cmd(
         type: 1,
       }));
 
-      const msg = {
-        image: { url: movie.image },
+      const buttonMessage = {
+        image: movie.image,
         caption: desc,
         footer: "> _*Powered By Manaofc*_",
         buttons,
         headerType: 4,
       };
 
-      return await socket.buttonMessage(from, msg, mek);
+      return await socket.buttonMessage(from, buttonMessage, mek);
     } catch (e) {
       console.error(e);
       reply("*ERROR !!*");
