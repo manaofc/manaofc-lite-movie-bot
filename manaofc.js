@@ -61,8 +61,8 @@ if (process.env.GITHUB_TOKEN) {
         auth: process.env.GITHUB_TOKEN
     });
 }
-const owner = "manaofc";
-const repo = "manaofc-lite";
+const owner = process.env.GITHUB_OWNER;
+const repo = process.env.GITHUB_REPO;
 
 // Memory optimization: Use weak references for sockets
 const activeSockets = new Map();
