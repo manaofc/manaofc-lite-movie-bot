@@ -2443,87 +2443,165 @@ async (socket, mek, m, { from, reply }) => {
             ////////////////////
 
 
-  cmd({
-    pattern: "subz",
+  cmd(
+  {
+    pattern: "cinesubz",
     react: "🎬",
-    desc: "Search Sinhala subtitles",
+    alias: ["movie"],
     category: "movie",
-    use: ".subz <movie name>",
-    filename: __filename
-}, async (socket, mek, m, { from, q, prefix, reply }) => {
-
+    use: ".cinesubz deadpool",
+    filename: __filename,
+  },
+  async (socket, mek, m, { from, prefix, q, reply }) => {
     try {
+      if (!q) return reply("Please give a movie name!");
 
-        if (!q) return reply("❗ Please enter a Movie name!.\nExample: .subz jurassic");
+      // SEARCH MOVIE
+      const res = await fetch(
+        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-search?q=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
+      );
 
-        reply("⏳ *Searching subtitles...*");
+      const json = await res.json();
 
-        const data = await SubzLK.search(q);
+      if (!json.status || !json.data.length) {
+        return reply("Movie not found!");
+      }
 
-        if (!data.length) return reply("❌ Subtitle not found!");
+      const data = json.data;
 
-        const rows = data.slice(0, 10).map((v) => ({
-            buttonId: `${prefix}subzdl ${v.url}`,
-            buttonText: {
-                displayText: v.title.length > 40
-                    ? v.title.slice(0, 37) + "..."
-                    : v.title
-            },
-            type: 1,
-        }));
+      // CREATE BUTTONS
+      const rows = data.slice(0, 10).map((v, i) => ({
+        buttonId: `${prefix}cinfo ${encodeURIComponent(v.link)}`,
+        buttonText: {
+          displayText: `${i + 1}. ${v.title.substring(0, 40)}`,
+        },
+        type: 1,
+      }));
 
-        const buttonMessage = {
-            text: "🎬 *Select Your Movie Subtitle*\n\nResults:",
-            footer: "> _Powered By Manaofc_",
-            buttons: rows,
-            headerType: 1
-        };
+      const buttonMessage = {
+        image: data[0].image,
+        caption: `🎬 *CineSubz Search Results*\n\nQuery: ${q}\n\nSelect a movie below`,
+        footer: "> _*Powered By Manaofc*_",
+        buttons: rows,
+        headerType: 4,
+      };
 
-        await socket.buttonMessage(from, buttonMessage, mek);
-
+      return await socket.buttonMessage(from, buttonMessage, mek);
     } catch (e) {
-        console.log(e);
-        reply("❌ Error searching subtitles!");
+      console.error(e);
+      reply("*ERROR !!*");
     }
-});
+  }
+);
 
-cmd({
-    pattern: "subzdl",
+// ================= INFO COMMAND =================
+
+cmd(
+  {
+    pattern: "cinfo",
+    react: "📥",
+    dontAddCommandList: true,
+    filename: __filename,
+  },
+  async (socket, mek, m, { from, q, reply }) => {
+    try {
+      if (!q) return reply("Need movie URL!");
+
+      // MOVIE INFO
+      const res = await fetch(
+        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-info?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
+      );
+
+      const json = await res.json();
+
+      if (!json.status) return reply("Movie info not found!");
+
+      const movie = json.data;
+
+      let desc = `🎬 *${movie.title}*\n\n`;
+      desc += `⭐ Rating: ${movie.rating}\n`;
+      desc += `📅 Year: ${movie.year}\n`;
+      desc += `⏱ Duration: ${movie.duration}\n`;
+      desc += `🎞 Quality: ${movie.quality}\n`;
+      desc += `🌍 Language: ${movie.tag}\n\n`;
+      desc += `📥 *Downloads*\n\n`;
+
+      const buttons = movie.downloads.map((d, i) => ({
+        buttonId: `.download ${encodeURIComponent(d.link)}`,
+        buttonText: {
+          displayText: `${d.quality} (${d.size})`,
+        },
+        type: 1,
+      }));
+
+      const msg = {
+        image: { url: movie.image },
+        caption: desc,
+        footer: "> _*Powered By Manaofc*_",
+        buttons,
+        headerType: 4,
+      };
+
+      return await socket.buttonMessage(from, msg, mek);
+    } catch (e) {
+      console.error(e);
+      reply("*ERROR !!*");
+    }
+  }
+);
+
+// ================= DOWNLOAD COMMAND =================
+
+cmd(
+  {
+    pattern: "download",
     react: "⬇️",
     dontAddCommandList: true,
-    filename: __filename
-}, async (socket, mek, m, { from, q, reply }) => {
-
+    filename: __filename,
+  },
+  async (socket, mek, m, { from, q, reply }) => {
     try {
+      if (!q) return reply("Need download URL!");
 
-        if (!q) return reply("❌ Invalid subtitle link!");
+      const res = await fetch(
+        `https://api-dark-shan-yt.koyeb.app/movie/cinesubz-download?url=${encodeURIComponent(q)}&apikey=b8bac21967ae1a95`
+      );
 
-        const movie = await SubzLK.getMovie(q);
+      const json = await res.json();
 
-        const subLink = movie.downloads.subtitle;
+      if (!json.status) return reply("Download failed!");
 
-        await socket.sendMessage(
-            from,
-            {
-                document: { url: subLink },
-                mimetype: "application/zip",
-                fileName: `${movie.title}.zip`,
-                caption:
-`🎬 *${movie.title}*
+      const data = json.data;
 
-👤 Author : ${movie.author}
-📅 ${movie.publishDate}
+      // GET DIRECT LINK
+      const direct =
+        data.download.find(v => v.name === "unknown") ||
+        data.download[0];
 
-> _*Powered By Manaofc*_`
-            },
-            { quoted: mek }
-        );
+      let txt = `📥 *Download Ready*\n\n`;
+      txt += `🎬 ${data.title}\n`;
+      txt += `💾 Size: ${data.size}\n\n`;
+      txt += `🔗 ${direct.url}`;
 
+      reply(txt);
+
+      // SEND FILE
+      await socket.sendMessage(
+        from,
+        {
+          document: { url: direct.url },
+          mimetype: "video/mp4",
+          fileName: data.title,
+          caption: "🎬 Movie Download",
+        },
+        { quoted: mek }
+      );
     } catch (e) {
-        console.log(e);
-        reply("❌ Subtitle download failed!");
+      console.error(e);
+      reply("*ERROR !!*");
     }
-});
+  }
+);
     /* ================== MESSAGE HANDLER ================== */
     socket.ev.on("messages.upsert", async ({ messages }) => {
         const mek = messages[0];
