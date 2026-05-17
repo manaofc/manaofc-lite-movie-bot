@@ -931,7 +931,7 @@ cmd(
         from,
         {
           image: { url: thumbnail },
-          caption: `🎵 *manaofc  Audio Download`,
+          caption: `🎵 *manaofc  Audio Download*`,
         },
         { quoted: mek }
       );
