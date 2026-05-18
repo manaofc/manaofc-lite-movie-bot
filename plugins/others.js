@@ -1,6 +1,6 @@
 const { cmd, commands } = require('../command');
 const { downloadAndSaveMedia } = require("../lib/msg");
-
+const axios = require("axios");
 
 cmd({
     pattern: "vv",
