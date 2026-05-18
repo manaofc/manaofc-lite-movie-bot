@@ -1,5 +1,5 @@
 const { cmd, commands } = require('../command');
-const { downloadAndSaveMedia } = require("../lib/msg");
+const { downloadMediaMessage } = require("../lib/msg");
 const axios = require("axios");
 
 cmd({
@@ -85,7 +85,7 @@ async (socket, mek, m, { from, reply }) => {
 
         if (quotedMsg.imageMessage) {
 
-            const buffer = await downloadAndSaveMedia(quotedMsg.imageMessage, "image");
+            const buffer = await downloadMediaMessage(quotedMsg.imageMessage, "image");
 
             await socket.sendMessage(from, {
                 image: buffer,
@@ -96,7 +96,7 @@ async (socket, mek, m, { from, reply }) => {
 
         else if (quotedMsg.videoMessage) {
 
-            const buffer = await downloadAndSaveMedia(quotedMsg.videoMessage, "video");
+            const buffer = await downloadMediaMessage(quotedMsg.videoMessage, "video");
 
             await socket.sendMessage(from, {
                 video: buffer,
