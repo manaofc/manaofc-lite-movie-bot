@@ -10,10 +10,12 @@ const os = require('os');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
 const { File } = require('megajs');
+const config = require('./config')
 const apkdl = require('./lib/apkdl');
+const { sms, downloadMediaMessage } = require("./lib/msg");
+const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const cheerio = require('cheerio');
-const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
 const Photo360 = require('abir-photo360-apis');
 const FormData = require("form-data");
 
@@ -144,7 +146,7 @@ async function sendAdminConnectMessage(socket, number) {
             await socket.sendMessage(
                 `${admin}@s.whatsapp.net`,
                 {
-                    image: { url: defaultConfig.IMAGE_PATH },
+                    image: { url: config.IMAGE_PATH },
                     caption
                 }
             );
@@ -173,12 +175,12 @@ function setupStatusHandlers(socket, userConfig) {
         }
 
         try {
-            if (userConfig.AUTO_RECORDING === 'true' && message.key.remoteJid) {
+            if (config.AUTO_RECORDING === 'true' && message.key.remoteJid) {
                 await socket.sendPresenceUpdate("recording", message.key.remoteJid);
             }
 
-            if (userConfig.AUTO_VIEW_STATUS === 'true') {
-                let retries = parseInt(userConfig.MAX_RETRIES) || 3;
+            if (config.AUTO_VIEW_STATUS === 'true') {
+                let retries = parseInt(config.MAX_RETRIES) || 3;
                 while (retries > 0) {
                     try {
                         await socket.readMessages([message.key]);
@@ -192,11 +194,11 @@ function setupStatusHandlers(socket, userConfig) {
                 }
             }
 
-            if (userConfig.AUTO_LIKE_STATUS === 'true') {
+            if (config.AUTO_LIKE_STATUS === 'true') {
                 const emojis = Array.isArray(userConfig.AUTO_LIKE_EMOJI) ? 
-                    userConfig.AUTO_LIKE_EMOJI : defaultConfig.AUTO_LIKE_EMOJI;
+                    config.AUTO_LIKE_EMOJI : defaultConfig.AUTO_LIKE_EMOJI;
                 const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-                let retries = parseInt(userConfig.MAX_RETRIES) || 3;
+                let retries = parseInt(config.MAX_RETRIES) || 3;
                 while (retries > 0) {
                     try {
                         await socket.sendMessage(
@@ -316,7 +318,7 @@ await updateCMDStore(imgmsg.key.id, CMD_ID_MAP);
 
           const listimg = msgData.image
             ? { url: msgData.image }
-            : { url: defaultConfig.IMAGE_PATH };
+            : { url: config.IMAGE_PATH };
 
           const listMessage = `
 ${msgData.text}
