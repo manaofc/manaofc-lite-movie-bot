@@ -1,5 +1,6 @@
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { cmd } = require("../command");
+const config = require("../config");
 cmd(
   {
     pattern: "cinesubz",
@@ -33,7 +34,7 @@ cmd(
       }));
 
       const buttonMessage = {
-        image: defaultConfig.IMAGE_PATH,
+        image: config.IMAGE_PATH,
         caption: `*MANAOFC LITE CINESUBZ DOWNLOAD 🎬*`,
         footer: "> _*Powered By Manaofc*_",
         buttons: rows,
