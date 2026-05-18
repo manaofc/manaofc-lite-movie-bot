@@ -1,21 +1,6 @@
 const { cmd, commands } = require('../command');
+const { downloadAndSaveMedia } = require("../lib/msg");
 
-
-async function downloadAndSaveMedia(message, mediaType) {
-    try {
-        const stream = await downloadContentFromMessage(message, mediaType);
-        let buffer = Buffer.from([]);
-
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        return buffer;
-    } catch (error) {
-        //console.error('Download Media Error:', error);
-        throw error;
-    }
-}
 
 cmd({
     pattern: "vv",
