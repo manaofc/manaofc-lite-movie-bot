@@ -208,11 +208,12 @@ function setupCommandHandlers(socket, number, userConfig) {
     const commandCooldowns = new Map();
     const COMMAND_COOLDOWN = 1000; // 1 second 
 
-	fs.readdirSync("./plugins/").forEach((plugin) => {
+        fs.readdirSync("./plugins/").forEach((plugin) => {
         if (path.extname(plugin).toLowerCase() == ".js") {
           require("./plugins/" + plugin);
         }
-	// ---------------- BUTTON MESSAGE -----------------
+        });
+        // ---------------- BUTTON MESSAGE -----------------
 const cos = '```';
 const NON_BUTTON = true; // Implement a switch to on/off this feature...
 
@@ -385,8 +386,12 @@ ${msgData.footer}`;
           ? mek.message.extendedTextMessage.contextInfo.quotedMessage || []
           : [];
       const botNumber = conn.user.id.split(":")[0];
-	  const pushname = mek.pushName || "NO NUMBER";
-	  const isowner =
+      const botNumber2 = conn.user.id.split(":")[0] + "@s.whatsapp.net";
+          const pushname = mek.pushName || "NO NUMBER";
+          const isMe = mek.key.fromMe;
+          const adminList = fs.existsSync(config.ADMIN_LIST_PATH) ? JSON.parse(fs.readFileSync(config.ADMIN_LIST_PATH)) : [];
+          const isOwner = adminList.includes(senderNumber) || isMe;
+          const isowner = isOwner;
       const groupMetadata = isGroup
         ? await conn.groupMetadata(from).catch((e) => {})
         : "";
@@ -396,7 +401,7 @@ ${msgData.footer}`;
       const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
       const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
       const isreaction = m.message.reactionMessage ? true : false;
-	  
+          
 
 // Reply helper
             const reply = async (text) => {
@@ -442,6 +447,7 @@ const events = require("./command");
       console.log(e);
     }
   });
+}
 //========================    
 // Memory optimization: Throttle message handlers
 function setupMessageHandlers(socket, userConfig) {
@@ -557,17 +563,17 @@ async function restoreSession(number) {
 const userConfigCache = new Map();
 const USER_CONFIG_CACHE_TTL = 300000; // 5 minutes
 
-async function config(number) {
+async function getUserConfig(number) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
         // Check cache first
-        const cached = config.get(sanitizedNumber);
+        const cached = userConfigCache.get(sanitizedNumber);
         if (cached && Date.now() - cached.timestamp < USER_CONFIG_CACHE_TTL) {
             return cached.data;
         }
         
-        let configData = { ...config };
+        let configData = { ...require('./config') };
         
         if (octokit) {
             try {
@@ -579,21 +585,17 @@ async function config(number) {
                 });
 
                 const content = Buffer.from(data.content, 'base64').toString('utf8');
-                const config = JSON.parse(content);
+                const remoteConfig = JSON.parse(content);
                 
                 // Merge with default config
-                configData = { ...configData, ...config };
+                configData = { ...configData, ...remoteConfig };
             } catch (error) {
                 console.warn(`No configuration found for ${number}, using default config`);
             }
         }
         
-        // Set owner number to the user's number if not set
-        if (!sanitizedNumber;
-        }
-        
         // Cache the config
-        config.set(sanitizedNumber, {
+        userConfigCache.set(sanitizedNumber, {
             data: configData,
             timestamp: Date.now()
         });
@@ -601,11 +603,11 @@ async function config(number) {
         return configData;
     } catch (error) {
         console.warn(`Error loading config for ${number}, using default config:`, error);
-        
+        return require('./config');
     }
 }
 
-async function config(number, config) {
+async function setUserConfig(number, newConfig) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
@@ -635,8 +637,8 @@ async function config(number, config) {
         }
         
         // Update cache
-        config.set(sanitizedNumber, {
-            data: config,
+        userConfigCache.set(sanitizedNumber, {
+            data: newConfig,
             timestamp: Date.now()
         });
         
@@ -990,8 +992,8 @@ router.get('/reconnect', async (req, res) => {
 router.get('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const config = await config(number);
-        res.status(200).send(config);
+        const userConfig = await getUserConfig(number);
+        res.status(200).send(userConfig);
     } catch (error) {
         console.error('Failed to load config:', error);
         res.status(500).send({ error: 'Failed to load config' });
@@ -1001,18 +1003,18 @@ router.get('/config/:number', async (req, res) => {
 router.post('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const config = req.body;
+        const incomingConfig = req.body;
         
         // Validate config
-        if (typeof config !== 'object') {
+        if (typeof incomingConfig !== 'object') {
             return res.status(400).send({ error: 'Invalid config format' });
         }
         
         // Load current config and merge
-        const config = await config(number);
-        const config = { ...config, ...config };
+        const currentConfig = await getUserConfig(number);
+        const mergedConfig = { ...currentConfig, ...incomingConfig };
         
-        await config(number, config);
+        await setUserConfig(number, mergedConfig);
         res.status(200).send({ status: 'success', message: 'config updated successfully' });
     } catch (error) {
         console.error('Failed to update config:', error);
@@ -1054,9 +1056,9 @@ setInterval(() => {
     }
     
     // Clean user config cache
-    for (let [key, value] of config.entries()) {
-        if (now - value.timestamp > CONFIG) {
-            config.delete(key);
+    for (let [key, value] of userConfigCache.entries()) {
+        if (now - value.timestamp > USER_CONFIG_CACHE_TTL) {
+            userConfigCache.delete(key);
         }
     }
     
