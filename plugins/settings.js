@@ -1,3 +1,5 @@
+const { cmd } = require("../command");
+const config = require("./config")
 cmd(
   {
     pattern: "settings",
@@ -89,9 +91,9 @@ if (!configKey || !configValue) {
 return reply("⚠️ Usage: .set KEY VALUE");
 }
 
-if (!userConfig) userConfig = {};
+if (!config) config = {};
 
-userConfig[configKey] = configValue;
+config[configKey] = configValue;
 
 await socket.sendMessage(from,{
 text:`✅ *Config Updated*
