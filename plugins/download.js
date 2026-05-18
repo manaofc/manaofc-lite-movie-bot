@@ -2,6 +2,7 @@ const { File } = require("megajs");
 const apkdl = require('../lib/apkdl');
 const { fetchJson } = require('../lib/functions')
 const { cmd } = require("../command");
+const defaultConfig = require("./config");
 const path = require("path");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const axios = require("axios");
