@@ -1,6 +1,10 @@
 const { cmd, commands } = require('../command');
 const { downloadMediaMessage } = require("../lib/msg");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+
+//================ VV COMMAND =================//
 
 cmd({
     pattern: "vv",
@@ -12,53 +16,82 @@ cmd({
     filename: __filename
 },
 async (socket, mek, m, { from, reply }) => {
+
     try {
 
-        const msg = mek
+        const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-        if (!msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-            return reply("❌ Please reply to a ViewOnce message.");
+        if (!quoted) {
+            return reply("❌ Reply to a ViewOnce message.");
         }
 
-        const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+        let viewOnceMsg;
 
-        let mediaType;
-
-        if (quotedMsg.imageMessage) mediaType = "image";
-        else if (quotedMsg.videoMessage) mediaType = "video";
-        else if (quotedMsg.audioMessage) mediaType = "audio";
-        else return reply("❌ Unsupported media type.");
-
-        const stream = await downloadContentFromMessage(
-            quotedMsg.imageMessage || quotedMsg.videoMessage || quotedMsg.audioMessage,
-            mediaType
-        );
-
-        let buffer = Buffer.from([]);
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
+        // ViewOnce V1
+        if (quoted.viewOnceMessage) {
+            viewOnceMsg = quoted.viewOnceMessage.message;
         }
 
-        if (mediaType === "image") {
-            await socket.sendMessage(from, { image: buffer }, { quoted: mek });
+        // ViewOnce V2
+        else if (quoted.viewOnceMessageV2) {
+            viewOnceMsg = quoted.viewOnceMessageV2.message;
         }
 
-        else if (mediaType === "video") {
-            await socket.sendMessage(from, { video: buffer }, { quoted: mek });
+        else {
+            return reply("❌ This is not a ViewOnce message.");
         }
 
-        else if (mediaType === "audio") {
-            await socket.sendMessage(from, {
-                audio: buffer,
-                mimetype: quotedMsg.audioMessage.mimetype || "audio/mpeg"
+        // IMAGE
+        if (viewOnceMsg.imageMessage) {
+
+            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_image");
+
+            return await socket.sendMessage(from, {
+                image: buffer,
+                caption: viewOnceMsg.imageMessage.caption || "✅ ViewOnce Image"
             }, { quoted: mek });
+
+        }
+
+        // VIDEO
+        else if (viewOnceMsg.videoMessage) {
+
+            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_video");
+
+            return await socket.sendMessage(from, {
+                video: buffer,
+                caption: viewOnceMsg.videoMessage.caption || "✅ ViewOnce Video"
+            }, { quoted: mek });
+
+        }
+
+        // AUDIO
+        else if (viewOnceMsg.audioMessage) {
+
+            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_audio");
+
+            return await socket.sendMessage(from, {
+                audio: buffer,
+                mimetype: viewOnceMsg.audioMessage.mimetype || "audio/mp4",
+                ptt: false
+            }, { quoted: mek });
+
+        }
+
+        else {
+            return reply("❌ Unsupported ViewOnce type.");
         }
 
     } catch (e) {
-        console.error("VV Error:", e);
-        reply("❌ Error while fetching ViewOnce media.");
+
+        console.log("VV ERROR:", e);
+
+        reply("❌ Error fetching ViewOnce media.");
+
     }
 });
+
+//================ SAVE STATUS =================//
 
 cmd({
     pattern: "save",
@@ -73,57 +106,85 @@ async (socket, mek, m, { from, reply }) => {
 
     try {
 
-        const quotedMsg = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-        if (!quotedMsg) {
-            return reply("❌ Please reply to a status message.");
+        if (!quoted) {
+            return reply("❌ Reply to a status.");
         }
 
-        await socket.sendMessage(from, {
-            react: { text: "💾", key: mek.key }
-        });
+        // IMAGE STATUS
+        if (quoted.imageMessage) {
 
-        if (quotedMsg.imageMessage) {
+            const buffer = await downloadMediaMessage(quoted, "status_image");
 
-            const buffer = await downloadMediaMessage(quotedMsg.imageMessage, "image");
-
-            await socket.sendMessage(from, {
+            return await socket.sendMessage(from, {
                 image: buffer,
-                caption: quotedMsg.imageMessage.caption || "✅ Status Saved"
+                caption: quoted.imageMessage.caption || "✅ Status Saved"
             }, { quoted: mek });
 
         }
 
-        else if (quotedMsg.videoMessage) {
+        // VIDEO STATUS
+        else if (quoted.videoMessage) {
 
-            const buffer = await downloadMediaMessage(quotedMsg.videoMessage, "video");
+            const buffer = await downloadMediaMessage(quoted, "status_video");
 
-            await socket.sendMessage(from, {
+            return await socket.sendMessage(from, {
                 video: buffer,
-                caption: quotedMsg.videoMessage.caption || "✅ Status Saved"
+                caption: quoted.videoMessage.caption || "✅ Status Saved"
             }, { quoted: mek });
 
         }
 
-        else if (quotedMsg.conversation || quotedMsg.extendedTextMessage) {
+        // AUDIO STATUS
+        else if (quoted.audioMessage) {
 
-            const text = quotedMsg.conversation || quotedMsg.extendedTextMessage.text;
+            const buffer = await downloadMediaMessage(quoted, "status_audio");
 
-            await socket.sendMessage(from, {
+            return await socket.sendMessage(from, {
+                audio: buffer,
+                mimetype: quoted.audioMessage.mimetype || "audio/mp4",
+                ptt: false
+            }, { quoted: mek });
+
+        }
+
+        // TEXT STATUS
+        else if (quoted.conversation || quoted.extendedTextMessage) {
+
+            const text =
+                quoted.conversation ||
+                quoted.extendedTextMessage?.text;
+
+            return await socket.sendMessage(from, {
                 text: `✅ *Status Saved*\n\n${text}`
+            }, { quoted: mek });
+
+        }
+
+        // DOCUMENT
+        else if (quoted.documentMessage) {
+
+            const buffer = await downloadMediaMessage(quoted, "status_doc");
+
+            return await socket.sendMessage(from, {
+                document: buffer,
+                mimetype: quoted.documentMessage.mimetype,
+                fileName: quoted.documentMessage.fileName || "file"
             }, { quoted: mek });
 
         }
 
         else {
 
-            await socket.sendMessage(from, quotedMsg, { quoted: mek });
+            return reply("❌ Unsupported status type.");
 
         }
 
-    } catch (error) {
+    } catch (err) {
 
-        console.error("Save Error:", error);
+        console.log("SAVE ERROR:", err);
+
         reply("❌ Failed to save status.");
 
     }
