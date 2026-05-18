@@ -2,7 +2,7 @@ const { File } = require("megajs");
 const apkdl = require('../lib/apkdl');
 const { fetchJson } = require('../lib/functions')
 const { cmd } = require("../command");
-const defaultConfig = require("./config");
+const config = require("./config");
 const path = require("path");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const axios = require("axios");
@@ -234,7 +234,7 @@ type:1
 }))
 
 const buttonMessage = {
-image: defaultConfig.IMAGE_PATH,
+image: config.IMAGE_PATH,
 caption:`*MANAOFC LITE XVIDEO DOWNLOAD 🔞*`,
 footer:`> _*Powered By Manaofc*_`,
 buttons: rows,
@@ -330,7 +330,7 @@ cmd(
       }));
 
       const buttonMessage = {
-        image: defaultConfig.IMAGE_PATH,
+        image: config.IMAGE_PATH,
         caption: `*MANAOFC LITE APK DOWNLOAD.* 📦`,
         footer: '> _*Powered By Manaofc*_ ',
         buttons: rows,
