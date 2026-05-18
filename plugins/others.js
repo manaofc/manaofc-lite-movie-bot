@@ -9,10 +9,9 @@ const path = require("path");
 cmd({
     pattern: "vv",
     alias: ["viewonce"],
-    use: ".vv",
-    desc: "Download view once media",
-    category: "others",
     react: "👁️",
+    desc: "Download ViewOnce Media",
+    category: "others",
     filename: __filename
 },
 async (socket, mek, m, { from, reply }) => {
@@ -25,55 +24,55 @@ async (socket, mek, m, { from, reply }) => {
             return reply("❌ Reply to a ViewOnce message.");
         }
 
-        let viewOnceMsg;
+        // GET REAL MESSAGE
+        const msg =
+            quoted.viewOnceMessage?.message ||
+            quoted.viewOnceMessageV2?.message ||
+            quoted.viewOnceMessageV2Extension?.message;
 
-        // ViewOnce V1
-        if (quoted.viewOnceMessage) {
-            viewOnceMsg = quoted.viewOnceMessage.message;
-        }
-
-        // ViewOnce V2
-        else if (quoted.viewOnceMessageV2) {
-            viewOnceMsg = quoted.viewOnceMessageV2.message;
-        }
-
-        else {
+        if (!msg) {
+            console.log(JSON.stringify(quoted, null, 2));
             return reply("❌ This is not a ViewOnce message.");
         }
 
         // IMAGE
-        if (viewOnceMsg.imageMessage) {
+        if (msg.imageMessage) {
 
-            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_image");
+            const stream = await downloadContentFromMessage(
+                msg.imageMessage,
+                "image"
+            );
+
+            let buffer = Buffer.from([]);
+
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
 
             return await socket.sendMessage(from, {
                 image: buffer,
-                caption: viewOnceMsg.imageMessage.caption || "✅ ViewOnce Image"
+                caption: msg.imageMessage.caption || ""
             }, { quoted: mek });
 
         }
 
         // VIDEO
-        else if (viewOnceMsg.videoMessage) {
+        else if (msg.videoMessage) {
 
-            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_video");
+            const stream = await downloadContentFromMessage(
+                msg.videoMessage,
+                "video"
+            );
+
+            let buffer = Buffer.from([]);
+
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
 
             return await socket.sendMessage(from, {
                 video: buffer,
-                caption: viewOnceMsg.videoMessage.caption || "✅ ViewOnce Video"
-            }, { quoted: mek });
-
-        }
-
-        // AUDIO
-        else if (viewOnceMsg.audioMessage) {
-
-            const buffer = await downloadMediaMessage(viewOnceMsg, "vv_audio");
-
-            return await socket.sendMessage(from, {
-                audio: buffer,
-                mimetype: viewOnceMsg.audioMessage.mimetype || "audio/mp4",
-                ptt: false
+                caption: msg.videoMessage.caption || ""
             }, { quoted: mek });
 
         }
@@ -82,15 +81,15 @@ async (socket, mek, m, { from, reply }) => {
             return reply("❌ Unsupported ViewOnce type.");
         }
 
-    } catch (e) {
+    } catch (err) {
 
-        console.log("VV ERROR:", e);
+        console.log(err);
 
-        reply("❌ Error fetching ViewOnce media.");
+        reply("❌ VV Error");
 
     }
-});
 
+});
 //================ SAVE STATUS =================//
 
 cmd({
