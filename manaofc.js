@@ -1,14 +1,14 @@
 const express = require('express');
+const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 const { exec } = require('child_process');
-const router = express.Router();
 const pino = require('pino');
-const os = require('os');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
 const config = require('./config')
-const { sms, downloadMediaMessage } = require("./lib/msg");
+const { sms, downloadMediaMessage, downloadAndSaveMedia, saveMessage } = require("./lib/msg");
+const { updateCMDStore, isbtnID, getCMDStore, getCmdForCmdId } = require("./lib/button.js");
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
 
 
@@ -53,7 +53,7 @@ const NUMBER_LIST_PATH = './numbers.json';
 // Memory optimization: Cache frequently used data
 let adminCache = null;
 let adminCacheTime = 0;
-const ADMIN_CACHE_TTL = 300000; // 5 minutes
+const ADMIN_CACHE_TTL = 86400000; // 24 hour
 
 // Initialize directories
 if (!fs.existsSync(SESSION_BASE_PATH)) {
@@ -79,6 +79,7 @@ function loadAdmins() {
         return [];
     }
 }
+
 
 function getSriLankaTimestamp() {
     return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
@@ -122,98 +123,12 @@ async function cleanDuplicateFiles(number) {
     }
 }
 
-
-
-// Memory optimization: Throttle status handlers
-function setupStatusHandlers(socket, config) {
-    let lastStatusInteraction = 0;
-    const STATUS_INTERACTION_COOLDOWN = 10000; // 10 seconds
-    
-    socket.ev.on('messages.upsert', async ({ messages }) => {
-        const message = messages[0];
-        if (!message?.key || message.key.remoteJid !== 'status@broadcast' || !message.key.participant) return;
-        
-        // Throttle status interactions to prevent spam
-        const now = Date.now();
-        if (now - lastStatusInteraction < STATUS_INTERACTION_COOLDOWN) {
-            return;
-        }
-
-        try {
-            if (config.AUTO_RECORDING === 'true' && message.key.remoteJid) {
-                await socket.sendPresenceUpdate("recording", message.key.remoteJid);
-            }
-
-            if (config.AUTO_VIEW_STATUS === 'true') {
-                let retries = parseInt(config.MAX_RETRIES) || 3;
-                while (retries > 0) {
-                    try {
-                        await socket.readMessages([message.key]);
-                        break;
-                    } catch (error) {
-                        retries--;
-                        console.warn(`Failed to read status, retries left: ${retries}`, error);
-                        if (retries === 0) throw error;
-                        await delay(1000 * (parseInt(config.MAX_RETRIES) || 3 - retries));
-                    }
-                }
-            }
-
-            if (config.AUTO_LIKE_STATUS === 'true') {
-                const emojis = Array.isArray(config.AUTO_LIKE_EMOJI) ? 
-                    config.AUTO_LIKE_EMOJI : config.AUTO_LIKE_EMOJI;
-                const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-                let retries = parseInt(config.MAX_RETRIES) || 3;
-                while (retries > 0) {
-                    try {
-                        await socket.sendMessage(
-                            message.key.remoteJid,
-                            { react: { text: randomEmoji, key: message.key } },
-                            { statusJidList: [message.key.participant] }
-                        );
-                        lastStatusInteraction = now;
-                        console.log(`Reacted to status with ${randomEmoji}`);
-                        break;
-                    } catch (error) {
-                        retries--;
-                        console.warn(`Failed to react to status, retries left: ${retries}`, error);
-                        if (retries === 0) throw error;
-                        await delay(1000 * (parseInt(userConfig.MAX_RETRIES) || 3 - retries));
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Status handler error:', error);
-        }
-    });
-}
-
-async function downloadAndSaveMedia(message, mediaType) {
-    try {
-        const stream = await downloadContentFromMessage(message, mediaType);
-        let buffer = Buffer.from([]);
-
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        return buffer;
-    } catch (error) {
-        //console.error('Download Media Error:', error);
-        throw error;
-    }
-}
-// Setup command handlers for a single socket/session
+// Memory optimization: Streamline command handlers with rate limiting
 function setupCommandHandlers(socket, number, userConfig) {
     const commandCooldowns = new Map();
-    const COMMAND_COOLDOWN = 1000; // 1 second 
+    const COMMAND_COOLDOWN = 1000; // 1 second per user
 
-        fs.readdirSync("./plugins/").forEach((plugin) => {
-        if (path.extname(plugin).toLowerCase() == ".js") {
-          require("./plugins/" + plugin);
-        }
-        });
-        // ---------------- BUTTON MESSAGE -----------------
+   // ---------------- BUTTON MESSAGE -----------------
 const cos = '```';
 const NON_BUTTON = true; // Implement a switch to on/off this feature...
 
@@ -254,7 +169,7 @@ ${msgData.footer || ""}
 
 const btnimg = msgData.image
 ? { url: msgData.image }
-: { url: config.IMAGE_PATH };
+: { url: userConfig.IMAGE_PATH };
 
 const imgmsg = await socket.sendMessage(
 jid,
@@ -289,7 +204,7 @@ await updateCMDStore(imgmsg.key.id, CMD_ID_MAP);
 
           const listimg = msgData.image
             ? { url: msgData.image }
-            : { url: config.IMAGE_PATH };
+            : { url: userConfig.IMAGE_PATH };
 
           const listMessage = `
 ${msgData.text}
@@ -311,8 +226,11 @@ ${msgData.footer}`;
           await updateCMDStore(text.key.id, CMD_ID_MAP);
         }
       };
-/* ================== MESSAGE HANDLER ================== */
-    socket.ev.on("messages.upsert", async (mek) => {
+    fs.readdirSync("./plugins/").forEach((plugin) => {
+        if (path.extname(plugin).toLowerCase() == ".js") {
+          require("./plugins/" + plugin);
+        }
+socket.ev.on("messages.upsert", async (mek) => {
     try {
       mek = mek.messages[0];
       if (!mek.message) return;
@@ -320,13 +238,31 @@ ${msgData.footer}`;
         getContentType(mek.message) === "ephemeralMessage"
           ? mek.message.ephemeralMessage.message
           : mek.message;
-      if (config.AUTO_READ_STATUS === "true") {
-        if (mek.key && mek.key.remoteJid === "status@broadcast") {
-          await conn.readMessages([mek.key]);
-        }
-      }
+      if (userConfig.READ_MESSAGE === 'true') {
+    await conn.readMessages([mek.key]);  // Mark message as read
+    console.log(`Marked message from ${mek.key.remoteJid} as read.`);
+  }
+    if(mek.message.viewOnceMessageV2)
+    mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_READ_STATUS === "true"){
+      await conn.readMessages([mek.key])
+    }        
+  if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_STATUS_REPLY === "true"){
+  const user = mek.key.participant
+  const text = `MANAOFC LITE BOT JUST NOW SEEN`
+  await socket.sendMessage(user, { text: text, react: { text: '💜', key: mek.key } }, { quoted: mek })
+            }
+  if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_LIKE_STATUS === "true") {
+    const user = await conn.decodeJid(conn.user.id);
+    await socket.sendMessage(mek.key.remoteJid,
+    { react: { key: mek.key, text: '💚' } },
+    { statusJidList: [mek.key.participant, user] }
+    )};
+    await Promise.all([
+      saveMessage(mek),
+    ]);
 
-      if (mek.key && mek.key.remoteJid === "status@broadcast") return;
+    
       const m = sms(socket, mek);
       const type = getContentType(mek.message);
       const content = JSON.stringify(mek.message);
@@ -364,8 +300,8 @@ ${msgData.footer}`;
           : type == "videoMessage" && mek.message.videoMessage.caption
           ? mek.message.videoMessage.caption
           : "";
-      const prefix = config.PREFIX
-        ? config.PREFIX
+      const prefix = userConfig.PREFIX
+        ? userConfig.PREFIX
         : /^./.test(body)
         ? body.match(/^./gi)
         : "#";
@@ -377,7 +313,7 @@ ${msgData.footer}`;
       const q = args.join(" ");
       const isGroup = from.endsWith("@g.us");
       const sender = mek.key.fromMe
-        ? conn.user.id.split(":")[0] + "@s.whatsapp.net" || conn.user.id
+        ? socket.user.id.split(":")[0] + "@s.whatsapp.net" || socket.user.id
         : mek.key.participant || mek.key.remoteJid;
       const senderNumber = sender.split("@")[0];
       const mentionByTag =
@@ -386,12 +322,10 @@ ${msgData.footer}`;
           ? mek.message.extendedTextMessage.contextInfo.quotedMessage || []
           : [];
       const botNumber = conn.user.id.split(":")[0];
-      const botNumber2 = conn.user.id.split(":")[0] + "@s.whatsapp.net";
-          const pushname = mek.pushName || "NO NUMBER";
-          const isMe = mek.key.fromMe;
-          const adminList = fs.existsSync(config.ADMIN_LIST_PATH) ? JSON.parse(fs.readFileSync(config.ADMIN_LIST_PATH)) : [];
-          const isOwner = adminList.includes(senderNumber) || isMe;
-          const isowner = isOwner;
+	  const pushname = mek.pushName || "NO NUMBER";
+	  const isMe = botNumber.includes(senderNumber);
+	  const isOwner = ownerNumber?.includes(senderNumber) || isMe;
+      const botNumber2 = await jidNormalizedUser(conn.user.id);
       const groupMetadata = isGroup
         ? await conn.groupMetadata(from).catch((e) => {})
         : "";
@@ -400,14 +334,17 @@ ${msgData.footer}`;
       const groupAdmins = isGroup ? await getGroupAdmins(participants) : "";
       const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
       const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
-      const isreaction = m.message.reactionMessage ? true : false;
-          
+      const isreact = m.message.reactionMessage ? true : false;
 
 // Reply helper
             const reply = async (text) => {
                 await socket.sendMessage(from, { text }, { quoted: mek });
             };
-
+ //==========WORKTYPE============ 
+  if(!isOwner && userConfig.WORK_TYPE === "private") return
+  if(!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return
+  if(!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return
+   
 const events = require("./command");
       const cmdName = isCmd
         ? body.slice(1).trim().split(" ")[0].toLowerCase()
@@ -447,35 +384,21 @@ const events = require("./command");
       console.log(e);
     }
   });
-}
-//========================    
-// Memory optimization: Throttle message handlers
-function setupMessageHandlers(socket, userConfig) {
-    let lastPresenceUpdate = 0;
-    const PRESENCE_UPDATE_COOLDOWN = 5000; // 5 seconds
-    
-    socket.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
 
-        // Throttle presence updates
-        const now = Date.now();
-        if (now - lastPresenceUpdate < PRESENCE_UPDATE_COOLDOWN) {
-            return;
-        }
-
-        if (config.AUTO_RECORDING === 'true') {
-            try {
-                await socket.sendPresenceUpdate('recording', msg.key.remoteJid);
-                lastPresenceUpdate = now;
-                console.log(`Set recording presence for ${msg.key.remoteJid}`);
-            } catch (error) {
-                console.error('Failed to set recording presence:', error);
-            }
-        }
-    });
-}
-
+		 const presence = userConfig.PRESENCE;
+  if (presence && presence !== "available") {
+      if (presence === "composing") {
+          await socket.sendPresenceUpdate("composing", from);
+      } else if (presence === "recording") {
+          await socket.sendPresenceUpdate("recording", from);
+      } else if (presence === "unavailable") {
+          await socket.sendPresenceUpdate("unavailable", from);
+      } else {
+          await socket.sendPresenceUpdate("available", from);
+      }
+  } else {
+      await socket.sendPresenceUpdate("available", from);
+  }
 // Memory optimization: Batch GitHub operations
 async function deleteSessionFromGitHub(number) {
     try {
@@ -563,7 +486,7 @@ async function restoreSession(number) {
 const userConfigCache = new Map();
 const USER_CONFIG_CACHE_TTL = 300000; // 5 minutes
 
-async function getUserConfig(number) {
+async function loadUserConfig(number) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
@@ -573,7 +496,7 @@ async function getUserConfig(number) {
             return cached.data;
         }
         
-        let configData = { ...require('./config') };
+        let configData = { ...defaultConfig };
         
         if (octokit) {
             try {
@@ -585,13 +508,18 @@ async function getUserConfig(number) {
                 });
 
                 const content = Buffer.from(data.content, 'base64').toString('utf8');
-                const remoteConfig = JSON.parse(content);
+                const userConfig = JSON.parse(content);
                 
                 // Merge with default config
-                configData = { ...configData, ...remoteConfig };
+                configData = { ...configData, ...userConfig };
             } catch (error) {
                 console.warn(`No configuration found for ${number}, using default config`);
             }
+        }
+        
+        // Set owner number to the user's number if not set
+        if (!configData.OWNER_NUMBER) {
+            configData.OWNER_NUMBER = sanitizedNumber;
         }
         
         // Cache the config
@@ -603,11 +531,11 @@ async function getUserConfig(number) {
         return configData;
     } catch (error) {
         console.warn(`Error loading config for ${number}, using default config:`, error);
-        return require('./config');
+        return { ...defaultConfig, OWNER_NUMBER: number.replace(/[^0-9]/g, '') };
     }
 }
 
-async function setUserConfig(number, newConfig) {
+async function updateUserConfig(number, newConfig) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
@@ -724,21 +652,21 @@ async function EmpirePair(number, res) {
             },
             printQRInTerminal: false,
             logger,
-            browser: Browsers.windows('Chrome')
+            browser: Browsers.windows('Safari')
         });
 
         socketCreationTime.set(sanitizedNumber, Date.now());
 
         // Load user config
-        const userConfig = await getUserConfig(sanitizedNumber);
+        const userConfig = await loadUserConfig(sanitizedNumber);
         
-        setupStatusHandlers(socket, userConfig);
+        
         setupCommandHandlers(socket, sanitizedNumber, userConfig);
-        setupMessageHandlers(socket, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
+        handleMessageRevocation(socket, sanitizedNumber); 
 
         if (!socket.authState.creds.registered) {
-            let retries = parseInt(userConfig.MAX_RETRIES) || 3;
+            let retries = parseInt(userConfig.MAX_RETRIES);
             let code;
             while (retries > 0) {
                 try {
@@ -748,7 +676,7 @@ async function EmpirePair(number, res) {
                 } catch (error) {
                     retries--;
                     console.warn(`Failed to request pairing code: ${retries}, error.message`, retries);
-                    await delay(2000 * ((parseInt(userConfig.MAX_RETRIES) || 3) - retries));
+                    await delay(2000 * ((parseInt(userConfig.MAX_RETRIES) - retries));
                 }
             }
             if (!res.headersSent) {
@@ -792,14 +720,16 @@ async function EmpirePair(number, res) {
                     await delay(3000);
                     
                     const userJid = jidNormalizedUser(socket.user.id);
+   
+                                    
+                    await updateAboutStatus(socket);
+                    await updateStoryStatus(socket);
 
                     activeSockets.set(sanitizedNumber, socket);
 
                     await socket.sendMessage(userJid, {
-    image: {
-        url: config.IMAGE_PATH
-    },
-    caption: `MANAOFC LITE BOT CONNECTED
+                        image: { url: userConfig.IMAGE_PATH || defaultConfig.IMAGE_PATH},
+                        caption: `MANAOFC LITE BOT CONNECTED
 
 ✅ Successfully connected!
 
@@ -812,7 +742,7 @@ async function EmpirePair(number, res) {
 > _*Powered By Manaofc*_`
 });
 
-                    await sendAdminConnectMessage(socket, sanitizedNumber);
+                    
 
                     let numbers = [];
                     if (fs.existsSync(NUMBER_LIST_PATH)) {
@@ -824,7 +754,7 @@ async function EmpirePair(number, res) {
                     }
                 } catch (error) {
                     console.error('Connection error:', error);
-                    exec(`pm2 restart ${process.env.PM2_NAME || '𝐀𝐫𝐬𝐥𝐚𝐧-𝐌𝐃-𝐌𝐢𝐧𝐢-𝐅𝚁𝙴𝙴-𝐁𝙾𝚃-session'}`);
+                    exec(`pm2 restart ${process.env.PM2_NAME || 'MANISHA-MD-bot-session'}`);
                 }
             }
         });
@@ -992,8 +922,8 @@ router.get('/reconnect', async (req, res) => {
 router.get('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const userConfig = await getUserConfig(number);
-        res.status(200).send(userConfig);
+        const config = await loadUserConfig(number);
+        res.status(200).send(config);
     } catch (error) {
         console.error('Failed to load config:', error);
         res.status(500).send({ error: 'Failed to load config' });
@@ -1003,19 +933,19 @@ router.get('/config/:number', async (req, res) => {
 router.post('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const incomingConfig = req.body;
+        const newConfig = req.body;
         
         // Validate config
-        if (typeof incomingConfig !== 'object') {
+        if (typeof newConfig !== 'object') {
             return res.status(400).send({ error: 'Invalid config format' });
         }
         
         // Load current config and merge
-        const currentConfig = await getUserConfig(number);
-        const mergedConfig = { ...currentConfig, ...incomingConfig };
+        const currentConfig = await loadUserConfig(number);
+        const mergedConfig = { ...currentConfig, ...newConfig };
         
-        await setUserConfig(number, mergedConfig);
-        res.status(200).send({ status: 'success', message: 'config updated successfully' });
+        await updateUserConfig(number, mergedConfig);
+        res.status(200).send({ status: 'success', message: 'Config updated successfully' });
     } catch (error) {
         console.error('Failed to update config:', error);
         res.status(500).send({ error: 'Failed to update config' });
@@ -1035,7 +965,7 @@ process.on('exit', () => {
     adminCache = null;
     adminCacheTime = 0;
     sessionCache.clear();
-    configcache.clear();
+    userConfigCache.clear();
 });
 
 process.on('uncaughtException', (err) => {
