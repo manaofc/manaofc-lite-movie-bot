@@ -1,5 +1,13 @@
-const axios = require('axios');
-const yts = require('yt-search');
+const { File } = require("megajs");
+const apkdl = require('../lib/apkdl');
+const { fetchJson } = require('../lib/functions')
+const { cmd } = require("../command");
+const path = require("path");
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const axios = require("axios");
+const cheerio = require("cheerio");
+const yts = require("yt-search");
+
         cmd(
            {
             pattern: "song",
