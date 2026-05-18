@@ -1,4 +1,5 @@
-
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const { cmd } = require("../command");
 cmd(
   {
     pattern: "cinesubz",
