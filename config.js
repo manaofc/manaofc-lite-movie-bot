@@ -1,4 +1,4 @@
-const defaultConfig = {
+module.exports = {
     AUTO_VIEW_STATUS: 'true',
     AUTO_LIKE_STATUS: 'true',
     AUTO_RECORDING: 'true',
