@@ -129,38 +129,10 @@ async function cleanDuplicateFiles(number) {
     }
 }
 
-// Memory optimization: Reduce memory usage in message sending
-async function sendAdminConnectMessage(socket, number) {
-    const admins = loadAdmins();
-    const caption = `Bot Connected
-    
-    📞 Number: ${number}
-    
-    Bots: Connected
-    
-    > _*Powered By Manaofc*_`;
-
-    // Send messages sequentially to avoid memory spikes
-    for (const admin of admins) {
-        try {
-            await socket.sendMessage(
-                `${admin}@s.whatsapp.net`,
-                {
-                    image: { url: config.IMAGE_PATH },
-                    caption
-                }
-            );
-            // Add a small delay to prevent rate limiting and memory buildup
-            await delay(100);
-        } catch (error) {
-            console.error(`Failed to send connect message to admin ${admin}:`, error);
-        }
-    }
-}
 
 
 // Memory optimization: Throttle status handlers
-function setupStatusHandlers(socket, userConfig) {
+function setupStatusHandlers(socket, config) {
     let lastStatusInteraction = 0;
     const STATUS_INTERACTION_COOLDOWN = 10000; // 10 seconds
     
@@ -421,9 +393,7 @@ ${msgData.footer}`;
           : [];
       const botNumber = conn.user.id.split(":")[0];
 	  const pushname = mek.pushName || "NO NUMBER";
-	  const isMe = botNumber.includes(senderNumber);
-	  const isOwner = ownerNumber?.includes(senderNumber) || isMe;
-      const botNumber2 = await jidNormalizedUser(conn.user.id);
+	  const isowner =
       const groupMetadata = isGroup
         ? await conn.groupMetadata(from).catch((e) => {})
         : "";
@@ -433,7 +403,7 @@ ${msgData.footer}`;
       const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
       const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
       const isreaction = m.message.reactionMessage ? true : false;
-	  const manaofc = await abc;
+	  
 
 // Reply helper
             const reply = async (text) => {
@@ -630,7 +600,7 @@ async function config(number) {
         }
         
         // Cache the config
-        userConfigCache.set(sanitizedNumber, {
+        config.set(sanitizedNumber, {
             data: configData,
             timestamp: Date.now()
         });
@@ -642,7 +612,7 @@ async function config(number) {
     }
 }
 
-async function updateUserConfig(number, newConfig) {
+async function config(number, config) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
@@ -672,8 +642,8 @@ async function updateUserConfig(number, newConfig) {
         }
         
         // Update cache
-        userConfigCache.set(sanitizedNumber, {
-            data: newConfig,
+        config.set(sanitizedNumber, {
+            data: config,
             timestamp: Date.now()
         });
         
@@ -768,7 +738,7 @@ async function EmpirePair(number, res) {
         const config = await config(sanitizedNumber);
         
         setupStatusHandlers(socket, config);
-        setupCommandHandlers(socket, sanitizedNumber, userConfig);
+        setupCommandHandlers(socket, sanitizedNumber, config);
         setupMessageHandlers(socket, config);
         setupAutoRestart(socket, sanitizedNumber);
 
@@ -1027,7 +997,7 @@ router.get('/reconnect', async (req, res) => {
 router.get('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const config = await loadUserconfig(number);
+        const config = await config(number);
         res.status(200).send(config);
     } catch (error) {
         console.error('Failed to load config:', error);
@@ -1038,18 +1008,18 @@ router.get('/config/:number', async (req, res) => {
 router.post('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const newconfig = req.body;
+        const config = req.body;
         
         // Validate config
-        if (typeof newConfig !== 'object') {
+        if (typeof config !== 'object') {
             return res.status(400).send({ error: 'Invalid config format' });
         }
         
         // Load current config and merge
-        const currentconfig = await loadUserConfig(number);
-        const mergedconfig = { ...currentConfig, ...newConfig };
+        const config = await config(number);
+        const config = { ...config, ...config };
         
-        await updateUserconfig(number, mergedConfig);
+        await config(number, config);
         res.status(200).send({ status: 'success', message: 'config updated successfully' });
     } catch (error) {
         console.error('Failed to update config:', error);
@@ -1091,9 +1061,9 @@ setInterval(() => {
     }
     
     // Clean user config cache
-    for (let [key, value] of userConfigCache.entries()) {
-        if (now - value.timestamp > USER_CONFIG_CACHE_TTL) {
-            userConfigCache.delete(key);
+    for (let [key, value] of config.entries()) {
+        if (now - value.timestamp > CONFIG) {
+            config.delete(key);
         }
     }
     
