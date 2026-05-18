@@ -99,11 +99,6 @@ function loadAdmins() {
     }
 }
 
-// Memory optimization: Use template literals efficiently
-function formatMessage(title, content, footer) {
-    return `*${title}*\n\n${content}\n\n> *${footer}*`;
-}
-
 function getSriLankaTimestamp() {
     return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
 }
