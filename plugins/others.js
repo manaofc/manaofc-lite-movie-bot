@@ -21,19 +21,15 @@ async (socket, mek, m, { from, reply }) => {
         const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
         if (!quoted) {
-            return reply("❌ Reply to a ViewOnce message.");
+            return reply("❌ Reply to a media message.");
         }
 
-        // GET REAL MESSAGE
+        // VIEWONCE SUPPORT
         const msg =
             quoted.viewOnceMessage?.message ||
             quoted.viewOnceMessageV2?.message ||
-            quoted.viewOnceMessageV2Extension?.message;
-
-        if (!msg) {
-            console.log(JSON.stringify(quoted, null, 2));
-            return reply("❌ This is not a ViewOnce message.");
-        }
+            quoted.viewOnceMessageV2Extension?.message ||
+            quoted;
 
         // IMAGE
         if (msg.imageMessage) {
@@ -77,15 +73,39 @@ async (socket, mek, m, { from, reply }) => {
 
         }
 
+        // AUDIO
+        else if (msg.audioMessage) {
+
+            const stream = await downloadContentFromMessage(
+                msg.audioMessage,
+                "audio"
+            );
+
+            let buffer = Buffer.from([]);
+
+            for await (const chunk of stream) {
+                buffer = Buffer.concat([buffer, chunk]);
+            }
+
+            return await socket.sendMessage(from, {
+                audio: buffer,
+                mimetype: msg.audioMessage.mimetype || "audio/mp4",
+                ptt: false
+            }, { quoted: mek });
+
+        }
+
         else {
-            return reply("❌ Unsupported ViewOnce type.");
+
+            return reply("❌ Unsupported media.");
+
         }
 
     } catch (err) {
 
-        console.log(err);
+        console.log("VV ERROR:", err);
 
-        reply("❌ VV Error");
+        reply("❌ Error downloading media.");
 
     }
 
