@@ -1,6 +1,7 @@
 module.exports = {
-    AUTO_VIEW_STATUS: 'true',
-    AUTO_LIKE_STATUS: 'true',
+    READ_MESSAGE: 'false',
+    AUTO_READ_STATUS: 'false',
+    AUTO_STATUS_REPLY: 'false',
     AUTO_RECORDING: 'true',
     AUTO_LIKE_EMOJI: ['💥', '👍', '😍', '💗', '🎈', '🎉', '🥳', '😎', '🚀', '🔥'],
     PREFIX: '.',
