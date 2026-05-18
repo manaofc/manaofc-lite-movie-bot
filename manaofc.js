@@ -37,20 +37,6 @@ const {
   delay
 } = require('baileys');
 
-// Default config structure
-const defaultConfig = {
-    AUTO_VIEW_STATUS: 'true',
-    AUTO_LIKE_STATUS: 'true',
-    AUTO_RECORDING: 'true',
-    AUTO_LIKE_EMOJI: ['💥', '👍', '😍', '💗', '🎈', '🎉', '🥳', '😎', '🚀', '🔥'],
-    PREFIX: '.',
-    MAX_RETRIES: 3,
-    WORK_TYPE: 'private',
-    ADMIN_LIST_PATH: './admin.json',
-    IMAGE_PATH: 'https://files.catbox.moe/qlx0lp.png',
-    OWNER_NUMBER: '94759934522'
-};
-
 
 
 // GitHub Octokit initialization
