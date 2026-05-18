@@ -518,8 +518,7 @@ async function loadUserConfig(number) {
         }
         
         // Set owner number to the user's number if not set
-        if (!configData.OWNER_NUMBER) {
-            configData.OWNER_NUMBER = sanitizedNumber;
+        if (sanitizedNumber);{
         }
         
         // Cache the config
@@ -531,7 +530,7 @@ async function loadUserConfig(number) {
         return configData;
     } catch (error) {
         console.warn(`Error loading config for ${number}, using default config:`, error);
-        return { ...defaultConfig, OWNER_NUMBER: number.replace(/[^0-9]/g, '') };
+        return { sanitizedNumber };
     }
 }
 
