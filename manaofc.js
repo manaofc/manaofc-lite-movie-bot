@@ -10,7 +10,7 @@ const moment = require('moment-timezone');
 const config = require('./config')
 const { sms, downloadMediaMessage } = require("./lib/msg");
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
-const { updateCMDStore, isbtnID, getCMDStore, getCmdForCmdId } = require("./lib/button.js");
+
 
 const {
   default: makeWASocket,
@@ -730,15 +730,15 @@ async function EmpirePair(number, res) {
         socketCreationTime.set(sanitizedNumber, Date.now());
 
         // Load user config
-        const config = await config(sanitizedNumber);
+        const userConfig = await getUserConfig(sanitizedNumber);
         
-        setupStatusHandlers(socket, config);
-        setupCommandHandlers(socket, sanitizedNumber, config);
-        setupMessageHandlers(socket, config);
+        setupStatusHandlers(socket, userConfig);
+        setupCommandHandlers(socket, sanitizedNumber, userConfig);
+        setupMessageHandlers(socket, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
 
         if (!socket.authState.creds.registered) {
-            let retries = parseInt(config.MAX_RETRIES) || 3;
+            let retries = parseInt(userConfig.MAX_RETRIES) || 3;
             let code;
             while (retries > 0) {
                 try {
