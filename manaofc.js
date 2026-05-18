@@ -7,15 +7,10 @@ const pino = require('pino');
 const os = require('os');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
-const { File } = require('megajs');
 const config = require('./config')
-const apkdl = require('./lib/apkdl');
 const { sms, downloadMediaMessage } = require("./lib/msg");
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const cheerio = require('cheerio');
-const Photo360 = require('abir-photo360-apis');
-const FormData = require("form-data");
+
 
 const {
   default: makeWASocket,
