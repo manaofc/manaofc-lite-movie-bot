@@ -31,7 +31,8 @@ mesaj += ' *◈ ' + video.title + '*\n🔗 ' + video.url + '\n\n> _*Powered By M
 });
 await socket.sendMessage(from , { text:  mesaj }, { quoted: mek } )
 } catch (e) {
-    l(e)
+    console.log(e)
   reply('*Error !!*')
 }
-})
+
+});
