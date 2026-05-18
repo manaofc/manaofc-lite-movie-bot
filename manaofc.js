@@ -242,7 +242,11 @@ async function downloadAndSaveMedia(message, mediaType) {
 function setupCommandHandlers(socket, number, userConfig) {
     const commandCooldowns = new Map();
     const COMMAND_COOLDOWN = 1000; // 1 second 
-// ---------------- BUTTON MESSAGE -----------------
+fs.readdirSync("./plugins/").forEach((plugin) => {
+        if (path.extname(plugin).toLowerCase() == ".js") {
+          require("./plugins/" + plugin);
+        }
+	// ---------------- BUTTON MESSAGE -----------------
 const cos = '```';
 const NON_BUTTON = true; // Implement a switch to on/off this feature...
 
