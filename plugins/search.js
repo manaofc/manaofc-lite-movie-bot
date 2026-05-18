@@ -1,5 +1,6 @@
-const {cmd} = require('../command')
+const { cmd } = require('../command')
 const yts = require("yt-search")
+const { isUrl } = require('../lib/functions')
 
 function ytreg(url) {
     const ytIdRegex = /(?:http(?:s|):\/\/|)(?:(?:www\.|)youtube(?:\-nocookie|)\.com\/(?:watch\?.*(?:|\&)v=|embed|shorts\/|v\/)|youtu\.be\/)([-_0-9A-Za-z]{11})/
