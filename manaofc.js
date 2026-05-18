@@ -490,7 +490,7 @@ function setupMessageHandlers(socket, userConfig) {
             return;
         }
 
-        if (userConfig.AUTO_RECORDING === 'true') {
+        if (config.AUTO_RECORDING === 'true') {
             try {
                 await socket.sendPresenceUpdate('recording', msg.key.remoteJid);
                 lastPresenceUpdate = now;
@@ -589,17 +589,17 @@ async function restoreSession(number) {
 const userConfigCache = new Map();
 const USER_CONFIG_CACHE_TTL = 300000; // 5 minutes
 
-async function loadUserConfig(number) {
+async function loadUserconfig(number) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
         // Check cache first
-        const cached = userConfigCache.get(sanitizedNumber);
+        const cached = configcache.get(sanitizedNumber);
         if (cached && Date.now() - cached.timestamp < USER_CONFIG_CACHE_TTL) {
             return cached.data;
         }
         
-        let configData = { ...defaultConfig };
+        let configData = { ...config };
         
         if (octokit) {
             try {
@@ -761,15 +761,15 @@ async function EmpirePair(number, res) {
         socketCreationTime.set(sanitizedNumber, Date.now());
 
         // Load user config
-        const userConfig = await loadUserConfig(sanitizedNumber);
+        const config = await config(sanitizedNumber);
         
-        setupStatusHandlers(socket, userConfig);
+        setupStatusHandlers(socket, config);
         setupCommandHandlers(socket, sanitizedNumber, userConfig);
-        setupMessageHandlers(socket, userConfig);
+        setupMessageHandlers(socket, config);
         setupAutoRestart(socket, sanitizedNumber);
 
         if (!socket.authState.creds.registered) {
-            let retries = parseInt(userConfig.MAX_RETRIES) || 3;
+            let retries = parseInt(config.MAX_RETRIES) || 3;
             let code;
             while (retries > 0) {
                 try {
@@ -828,7 +828,7 @@ async function EmpirePair(number, res) {
 
                     await socket.sendMessage(userJid, {
     image: {
-        url: userConfig.IMAGE_PATH || defaultConfig.IMAGE_PATH
+        url: config.IMAGE_PATH
     },
     caption: `MANAOFC LITE BOT CONNECTED
 
@@ -1023,7 +1023,7 @@ router.get('/reconnect', async (req, res) => {
 router.get('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const config = await loadUserConfig(number);
+        const config = await loadUserconfig(number);
         res.status(200).send(config);
     } catch (error) {
         console.error('Failed to load config:', error);
@@ -1034,7 +1034,7 @@ router.get('/config/:number', async (req, res) => {
 router.post('/config/:number', async (req, res) => {
     try {
         const { number } = req.params;
-        const newConfig = req.body;
+        const newconfig = req.body;
         
         // Validate config
         if (typeof newConfig !== 'object') {
@@ -1042,11 +1042,11 @@ router.post('/config/:number', async (req, res) => {
         }
         
         // Load current config and merge
-        const currentConfig = await loadUserConfig(number);
-        const mergedConfig = { ...currentConfig, ...newConfig };
+        const currentconfig = await loadUserConfig(number);
+        const mergedconfig = { ...currentConfig, ...newConfig };
         
-        await updateUserConfig(number, mergedConfig);
-        res.status(200).send({ status: 'success', message: 'Config updated successfully' });
+        await updateUserconfig(number, mergedConfig);
+        res.status(200).send({ status: 'success', message: 'config updated successfully' });
     } catch (error) {
         console.error('Failed to update config:', error);
         res.status(500).send({ error: 'Failed to update config' });
@@ -1066,7 +1066,7 @@ process.on('exit', () => {
     adminCache = null;
     adminCacheTime = 0;
     sessionCache.clear();
-    userConfigCache.clear();
+    configcache.clear();
 });
 
 process.on('uncaughtException', (err) => {
