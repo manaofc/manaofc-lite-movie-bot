@@ -1,5 +1,7 @@
-cmd(
-        {
+const axios = require('axios');
+const yts = require('yt-search');
+        cmd(
+           {
             pattern: "song",
             react: "🎵",
             alias: ["music", "yt"],
