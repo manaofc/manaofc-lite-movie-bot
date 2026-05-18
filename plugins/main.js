@@ -1,5 +1,5 @@
 const os = require('os');
-const defaultConfig = require("../config");
+const config = require("../config");
 const { cmd, commands } = require('../command');
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('../lib/functions');
 
@@ -39,7 +39,7 @@ async (socket, mek, m, { from, quoted, sender, reply }) => {
 
         // Send image with caption
         await socket.sendMessage(from, {
-            image: { url: defaultConfig.IMAGE_PATH },
+            image: { url: config.IMAGE_PATH },
             caption: text
         }, { quoted: mek });
 
@@ -76,7 +76,7 @@ const buttons = [
 {buttonId: prefix + 'moviemenu' , buttonText: {displayText: 'MOVIE MENU'}, type: 1},
 ]
 const buttonMessage = {
-  image: defaultConfig.IMAGE_PATH,
+  image: config.IMAGE_PATH,
   caption: `
 *╭─「 ᴄᴏᴍᴍᴀɴᴅꜱ ᴘᴀɴᴇʟ」──○●►*
 *│◈ ᴏᴡɴᴇʀ : manaofc*
@@ -126,7 +126,7 @@ let generatebutton = [{
     type: 1
   }]
   let buttonMessaged = {
-    image: defaultConfig.IMAGE_PATH,
+    image: config.IMAGE_PATH,
     caption: menuc,
     footer: '> _*Powered By Manaofc*_ ',
     headerType: 4,
@@ -168,7 +168,7 @@ let generatebutton = [{
     type: 1
   }]
   let buttonMessaged = {
-    image: defaultConfig.IMAGE_PATH,
+    image: config.IMAGE_PATH,
     caption: menuc,
     footer: '> _*Powered By Manaofc*_ ',
     headerType: 4,
@@ -210,7 +210,7 @@ let generatebutton = [{
     type: 1
   }]
   let buttonMessaged = {
-    image: defaultConfig.IMAGE_PATH,
+    image: config.IMAGE_PATH,
     caption: menuc,
     footer: '> _*Powered By Manaofc*_ ',
     headerType: 4,
@@ -251,7 +251,7 @@ let generatebutton = [{
     type: 1
   }]
 let buttonMessaged = {
-  image: defaultConfig.IMAGE_PATH,
+  image: config.IMAGE_PATH,
   caption: menuc,
   footer: '> _*Powered By Manaofc*_ ',
   headerType: 4,
@@ -293,7 +293,7 @@ let generatebutton = [{
     type: 1
   }]
   let buttonMessaged = {
-    image: defaultConfig.IMAGE_PATH,
+    image: config.IMAGE_PATH,
     caption: menuc,
     footer: '> _*Powered By Manaofc*_ ',
     headerType: 4,
@@ -335,7 +335,7 @@ let generatebutton = [{
     type: 1
   }]
 let buttonMessaged = {
-  image: defaultConfig.IMAGE_PATH,
+  image: config.IMAGE_PATH,
   caption: menuc,
   footer: '> _*Powered By Manaofc*_ ',
   headerType: 4,
@@ -377,7 +377,7 @@ let generatebutton = [{
     type: 1
   }]
 let buttonMessaged = {
-  image: defaultConfig.IMAGE_PATH,
+  image: config.IMAGE_PATH,
   caption: menuc,
   footer: '> _*Powered By Manaofc*_ ',
   headerType: 4,
