@@ -10,7 +10,7 @@ const moment = require('moment-timezone');
 const config = require('./config')
 const { sms, downloadMediaMessage } = require("./lib/msg");
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
-
+const { updateCMDStore, isbtnID, getCMDStore, getCmdForCmdId } = require("./lib/button.js");
 
 const {
   default: makeWASocket,
