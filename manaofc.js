@@ -68,8 +68,8 @@ function loadAdmins() {
             return adminCache;
         }
         
-        if (fs.existsSync(defaultConfig.ADMIN_LIST_PATH)) {
-            adminCache = JSON.parse(fs.readFileSync(defaultConfig.ADMIN_LIST_PATH, 'utf8'));
+        if (fs.existsSync(config.ADMIN_LIST_PATH)) {
+            adminCache = JSON.parse(fs.readFileSync(config.ADMIN_LIST_PATH, 'utf8'));
             adminCacheTime = now;
             return adminCache;
         }
@@ -230,6 +230,8 @@ ${msgData.footer}`;
         if (path.extname(plugin).toLowerCase() == ".js") {
           require("./plugins/" + plugin);
         }
+    });
+
 socket.ev.on("messages.upsert", async (mek) => {
     try {
       mek = mek.messages[0];
@@ -239,13 +241,13 @@ socket.ev.on("messages.upsert", async (mek) => {
           ? mek.message.ephemeralMessage.message
           : mek.message;
       if (userConfig.READ_MESSAGE === 'true') {
-    await conn.readMessages([mek.key]);  // Mark message as read
+    await socket.readMessages([mek.key]);  // Mark message as read
     console.log(`Marked message from ${mek.key.remoteJid} as read.`);
   }
     if(mek.message.viewOnceMessageV2)
     mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
     if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_READ_STATUS === "true"){
-      await conn.readMessages([mek.key])
+      await socket.readMessages([mek.key])
     }        
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_STATUS_REPLY === "true"){
   const user = mek.key.participant
@@ -253,7 +255,7 @@ socket.ev.on("messages.upsert", async (mek) => {
   await socket.sendMessage(user, { text: text, react: { text: '💜', key: mek.key } }, { quoted: mek })
             }
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_LIKE_STATUS === "true") {
-    const user = await conn.decodeJid(conn.user.id);
+    const user = socket.user.id;
     await socket.sendMessage(mek.key.remoteJid,
     { react: { key: mek.key, text: '💚' } },
     { statusJidList: [mek.key.participant, user] }
@@ -321,13 +323,14 @@ socket.ev.on("messages.upsert", async (mek) => {
         mek.message.extendedTextMessage.contextInfo != null
           ? mek.message.extendedTextMessage.contextInfo.quotedMessage || []
           : [];
-      const botNumber = conn.user.id.split(":")[0];
-	  const pushname = mek.pushName || "NO NUMBER";
-	  const isMe = botNumber.includes(senderNumber);
-	  const isOwner = ownerNumber?.includes(senderNumber) || isMe;
-      const botNumber2 = await jidNormalizedUser(conn.user.id);
+      const botNumber = socket.user.id.split(":")[0];
+          const pushname = mek.pushName || "NO NUMBER";
+          const isMe = botNumber.includes(senderNumber);
+          const ownerNumber = loadAdmins();
+          const isOwner = ownerNumber?.includes(senderNumber) || isMe;
+      const botNumber2 = await jidNormalizedUser(socket.user.id);
       const groupMetadata = isGroup
-        ? await conn.groupMetadata(from).catch((e) => {})
+        ? await socket.groupMetadata(from).catch((e) => {})
         : "";
       const groupName = isGroup ? groupMetadata.subject : "";
       const participants = isGroup ? await groupMetadata.participants : "";
@@ -355,7 +358,7 @@ const events = require("./command");
             (cmd) => cmd.alias && cmd.alias.includes(cmdName));
         if (cmd) {
           if (cmd.react)
-            conn.sendMessage(from, {
+            socket.sendMessage(from, {
               react: { text: cmd.react, key: mek.key },});
           try {
             cmd.function(socket, mek, m, { from,prefix, quoted, body, isCmd, command,args,q,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply,});
@@ -379,13 +382,7 @@ const events = require("./command");
         }
       });
 
- } catch (e) {
-     // const isError = String(e);
-      console.log(e);
-    }
-  });
-
-		 const presence = userConfig.PRESENCE;
+                 const presence = userConfig.PRESENCE;
   if (presence && presence !== "available") {
       if (presence === "composing") {
           await socket.sendPresenceUpdate("composing", from);
@@ -399,6 +396,14 @@ const events = require("./command");
   } else {
       await socket.sendPresenceUpdate("available", from);
   }
+
+ } catch (e) {
+     // const isError = String(e);
+      console.log(e);
+    }
+  });
+} // end setupCommandHandlers
+
 // Memory optimization: Batch GitHub operations
 async function deleteSessionFromGitHub(number) {
     try {
@@ -496,7 +501,7 @@ async function loadUserConfig(number) {
             return cached.data;
         }
         
-        let configData = { ...defaultConfig };
+        let configData = { ...config };
         
         if (octokit) {
             try {
@@ -530,7 +535,7 @@ async function loadUserConfig(number) {
         return configData;
     } catch (error) {
         console.warn(`Error loading config for ${number}, using default config:`, error);
-        return { sanitizedNumber };
+        return { ...config };
     }
 }
 
@@ -615,7 +620,35 @@ function setupAutoRestart(socket, number) {
     });
 }
 
+function handleMessageRevocation(socket, number) {
+    socket.ev.on('messages.update', (updates) => {
+        for (const update of updates) {
+            if (update.update?.message === null) {
+                console.log(`Message revoked for ${number}: ${update.key?.id}`);
+            }
+        }
+    });
+}
+
 // Memory optimization: Improve pairing process
+async function updateAboutStatus(socket) {
+    try {
+        await socket.updateProfileStatus('🤖 Powered by MANAOFC LITE | Type .menu for commands');
+    } catch (e) {
+        // non-critical, ignore
+    }
+}
+
+async function updateStoryStatus(socket) {
+    try {
+        await socket.sendMessage('status@broadcast', {
+            text: '🤖 MANAOFC LITE BOT is online! Type .menu for commands.'
+        });
+    } catch (e) {
+        // non-critical, ignore
+    }
+}
+
 async function EmpirePair(number, res) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
     const sessionPath = path.join(SESSION_BASE_PATH, `session_${sanitizedNumber}`);
@@ -675,7 +708,7 @@ async function EmpirePair(number, res) {
                 } catch (error) {
                     retries--;
                     console.warn(`Failed to request pairing code: ${retries}, error.message`, retries);
-                    await delay(2000 * ((parseInt(userConfig.MAX_RETRIES) - retries));
+                    await delay(2000 * (parseInt(userConfig.MAX_RETRIES) - retries));
                 }
             }
             if (!res.headersSent) {
@@ -727,7 +760,7 @@ async function EmpirePair(number, res) {
                     activeSockets.set(sanitizedNumber, socket);
 
                     await socket.sendMessage(userJid, {
-                        image: { url: userConfig.IMAGE_PATH || defaultConfig.IMAGE_PATH},
+                        image: { url: userConfig.IMAGE_PATH || config.IMAGE_PATH},
                         caption: `MANAOFC LITE BOT CONNECTED
 
 ✅ Successfully connected!
