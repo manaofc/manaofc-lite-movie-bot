@@ -189,14 +189,14 @@ function setupStatusHandlers(socket, userConfig) {
                         retries--;
                         console.warn(`Failed to read status, retries left: ${retries}`, error);
                         if (retries === 0) throw error;
-                        await delay(1000 * (parseInt(userConfig.MAX_RETRIES) || 3 - retries));
+                        await delay(1000 * (parseInt(config.MAX_RETRIES) || 3 - retries));
                     }
                 }
             }
 
             if (config.AUTO_LIKE_STATUS === 'true') {
-                const emojis = Array.isArray(userConfig.AUTO_LIKE_EMOJI) ? 
-                    config.AUTO_LIKE_EMOJI : defaultConfig.AUTO_LIKE_EMOJI;
+                const emojis = Array.isArray(config.AUTO_LIKE_EMOJI) ? 
+                    config.AUTO_LIKE_EMOJI : config.AUTO_LIKE_EMOJI;
                 const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
                 let retries = parseInt(config.MAX_RETRIES) || 3;
                 while (retries > 0) {
@@ -242,7 +242,8 @@ async function downloadAndSaveMedia(message, mediaType) {
 function setupCommandHandlers(socket, number, userConfig) {
     const commandCooldowns = new Map();
     const COMMAND_COOLDOWN = 1000; // 1 second 
-fs.readdirSync("./plugins/").forEach((plugin) => {
+
+	fs.readdirSync("./plugins/").forEach((plugin) => {
         if (path.extname(plugin).toLowerCase() == ".js") {
           require("./plugins/" + plugin);
         }
@@ -287,7 +288,7 @@ ${msgData.footer || ""}
 
 const btnimg = msgData.image
 ? { url: msgData.image }
-: { url: defaultConfig.IMAGE_PATH };
+: { url: config.IMAGE_PATH };
 
 const imgmsg = await socket.sendMessage(
 jid,
@@ -593,12 +594,12 @@ async function restoreSession(number) {
 const userConfigCache = new Map();
 const USER_CONFIG_CACHE_TTL = 300000; // 5 minutes
 
-async function loadUserconfig(number) {
+async function config(number) {
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         
         // Check cache first
-        const cached = configcache.get(sanitizedNumber);
+        const cached = config.get(sanitizedNumber);
         if (cached && Date.now() - cached.timestamp < USER_CONFIG_CACHE_TTL) {
             return cached.data;
         }
@@ -615,18 +616,17 @@ async function loadUserconfig(number) {
                 });
 
                 const content = Buffer.from(data.content, 'base64').toString('utf8');
-                const userConfig = JSON.parse(content);
+                const config = JSON.parse(content);
                 
                 // Merge with default config
-                configData = { ...configData, ...userConfig };
+                configData = { ...configData, ...config };
             } catch (error) {
                 console.warn(`No configuration found for ${number}, using default config`);
             }
         }
         
         // Set owner number to the user's number if not set
-        if (!configData.OWNER_NUMBER) {
-            configData.OWNER_NUMBER = sanitizedNumber;
+        if (!sanitizedNumber;
         }
         
         // Cache the config
@@ -638,7 +638,7 @@ async function loadUserconfig(number) {
         return configData;
     } catch (error) {
         console.warn(`Error loading config for ${number}, using default config:`, error);
-        return { ...defaultConfig, OWNER_NUMBER: number.replace(/[^0-9]/g, '') };
+        
     }
 }
 
