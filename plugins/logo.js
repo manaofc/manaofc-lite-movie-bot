@@ -1,3 +1,5 @@
+const { cmd } = require("../command");
+const Photo360 = require('abir-photo360-apis');
 const cache = new Map();
 
 /* ================================
