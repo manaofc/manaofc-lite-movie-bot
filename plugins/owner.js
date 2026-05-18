@@ -1,3 +1,5 @@
+const { cmd ,commands } = require('../command');
+
 cmd({
     pattern: "owner",
     desc: "Display owner contact information.",
