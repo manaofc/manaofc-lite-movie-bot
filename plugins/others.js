@@ -1,5 +1,5 @@
 const { cmd, commands } = require('../command');
-const { downloadMediaMessage } = require("../lib/msg");
+const { downloadMediaMessage, downloadContentFromMessage} = require("../lib/msg");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
