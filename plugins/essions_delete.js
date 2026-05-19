@@ -1,3 +1,5 @@
+const { cmd } = require("../command");
+
 cmd(
 {
     pattern: "confirm",
