@@ -6,7 +6,7 @@ const { exec } = require('child_process');
 const pino = require('pino');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
-const config = require('./config')
+const config = require('./lib/config')
 const { sms, downloadMediaMessage, downloadAndSaveMedia, saveMessage } = require("./lib/msg");
 const { updateCMDStore, isbtnID, getCMDStore, getCmdForCmdId } = require("./lib/button.js");
 const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
@@ -348,7 +348,7 @@ socket.ev.on("messages.upsert", async (mek) => {
   if(!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return
   if(!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return
    
-const events = require("./command");
+const events = require("./lib/command");
       const cmdName = isCmd
         ? body.slice(1).trim().split(" ")[0].toLowerCase()
         : false;
