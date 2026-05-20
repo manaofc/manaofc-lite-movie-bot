@@ -226,9 +226,9 @@ ${msgData.footer}`;
           await updateCMDStore(text.key.id, CMD_ID_MAP);
         }
       };
-    fs.readdirSync("./plugins/").forEach((plugin) => {
+    fs.readdirSync("./lib/plugins/").forEach((plugin) => {
         if (path.extname(plugin).toLowerCase() == ".js") {
-          require("./plugins/" + plugin);
+          require("./lib/plugins/" + plugin);
         }
     });
 
