@@ -674,7 +674,7 @@ async function handleMessageRevocation(socket, number) {
 
         try {
             await socket.sendMessage(userJid, {
-                image: { url: defaultConfig.IMAGE_PATH },
+                image: { url: userConfig.IMAGE_PATH },
                 caption: message
             });
             console.log(`Notified ${number} about message deletion: ${messageKey.id}`);
