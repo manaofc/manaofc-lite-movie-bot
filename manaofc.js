@@ -620,34 +620,95 @@ function setupAutoRestart(socket, number) {
     });
 }
 
-function handleMessageRevocation(socket, number) {
-    socket.ev.on('messages.update', (updates) => {
-        for (const update of updates) {
-            if (update.update?.message === null) {
-                console.log(`Message revoked for ${number}: ${update.key?.id}`);
+
+//=================
+// Memory optimization: Cache the about status to avoid repeated updates
+let lastAboutUpdate = 0;
+const ABOUT_UPDATE_INTERVAL = 3600000; // 1 hour
+
+async function updateAboutStatus(socket) {
+    const now = Date.now();
+    if (now - lastAboutUpdate < ABOUT_UPDATE_INTERVAL) {
+        return; // Skip update if it was done recently
+    }
+    
+    const aboutStatus = 'MANAOFC LITE BOT ACTIVETE 🚀';
+    try {
+        await socket.updateProfileStatus(aboutStatus);
+        lastAboutUpdate = now;
+        console.log(`Updated About status to: ${aboutStatus}`);
+    } catch (error) {
+        console.error('Failed to update About status:', error);
+    }
+}
+
+//==================
+let lastStoryUpdate = 0;
+const STORY_UPDATE_INTERVAL = 86400000; // 24 hours
+
+async function updateStoryStatus(socket) {
+    const now = Date.now();
+    if (now - lastStoryUpdate < STORY_UPDATE_INTERVAL) {
+        return; // Skip update if it was done recently
+    }
+    
+    const statusMessage = `connected! 🚀\nconnected at: ${getSriLankaTimestamp()}`;
+    try {
+        await socket.sendMessage('status@broadcast', { text: statusMessage });
+        lastStoryUpdate = now;
+        console.log(`Posted story status: ${statusMessage}`);
+    } catch (error) {
+        console.error('Failed to post story status:', error);
+    }
+}
+//=================
+async function handleMessageRevocation(socket, number) {
+    socket.ev.on('messages.delete', async ({ keys }) => {
+        if (!keys || keys.length === 0) return;
+
+        const messageKey = keys[0];
+        const userJid = jidNormalizedUser(socket.user.id);
+        const deletionTime = getSriLankaTimestamp();
+        
+        const message =`🗑️ MESSAGE DELETED\n\nA message was deleted from your chat.\n🧚‍♂️ From: ${messageKey.remoteJid}\n🍁 Deletion Time: ${deletionTime}\n\n> _*Powered By Manaofc*_`;
+
+        try {
+            await socket.sendMessage(userJid, {
+                image: { url: defaultConfig.IMAGE_PATH },
+                caption: message
+            });
+            console.log(`Notified ${number} about message deletion: ${messageKey.id}`);
+        } catch (error) {
+            console.error('Failed to send deletion notification:', error);
+        }
+    });
+} 
+//======================
+// Memory optimization: Throttle status handlers
+function setupStatusHandlers(socket, userConfig) {
+    let lastStatusInteraction = 0;
+    const STATUS_INTERACTION_COOLDOWN = 10000; // 10 seconds
+    
+    socket.ev.on('messages.upsert', async ({ messages }) => {
+        const message = messages[0];
+        if (!message?.key || message.key.remoteJid !== 'status@broadcast' || !message.key.participant) return;
+        
+        // Throttle status interactions to prevent spam
+        const now = Date.now();
+        if (now - lastStatusInteraction < STATUS_INTERACTION_COOLDOWN) {
+            return;
+        }
+
+        try {
+            if (userConfig.AUTO_RECORDING === 'true' && message.key.remoteJid) {
+                await socket.sendPresenceUpdate("recording", message.key.remoteJid);
             }
+        } catch (error) {
+            console.error('Status handler error:', error);
         }
     });
 }
-
-// Memory optimization: Improve pairing process
-async function updateAboutStatus(socket) {
-    try {
-        await socket.updateProfileStatus('🤖 Powered by MANAOFC LITE | Type .menu for commands');
-    } catch (e) {
-        // non-critical, ignore
-    }
-}
-
-async function updateStoryStatus(socket) {
-    try {
-        await socket.sendMessage('status@broadcast', {
-            text: '🤖 MANAOFC LITE BOT is online! Type .menu for commands.'
-        });
-    } catch (e) {
-        // non-critical, ignore
-    }
-}
+//==============
 
 async function EmpirePair(number, res) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
@@ -692,7 +753,7 @@ async function EmpirePair(number, res) {
         // Load user config
         const userConfig = await loadUserConfig(sanitizedNumber);
         
-        
+        setupStatusHandlers(socket, userConfig);
         setupCommandHandlers(socket, sanitizedNumber, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
         handleMessageRevocation(socket, sanitizedNumber); 
