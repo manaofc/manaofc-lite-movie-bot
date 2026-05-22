@@ -6,10 +6,6 @@ const { exec } = require('child_process');
 const pino = require('pino');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
-const config = require('./lib/config')
-const { sms, downloadMediaMessage, downloadAndSaveMedia, saveMessage } = require("./lib/msg");
-const { updateCMDStore, isbtnID, getCMDStore, getCmdForCmdId } = require("./lib/button.js");
-const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson, getsize, formatBytes, fetchBuffer, formatSize, getFile } = require('./lib/functions');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const {
@@ -261,6 +257,20 @@ ${msgData.footer}`;
           await updateCMDStore(text.key.id, CMD_ID_MAP);
         }
       };
+  //command support
+  var commands = [];
+
+function cmd(info, func) {
+    var data = info;
+    data.function = func;
+    if (!data.dontAddCommandList) data.dontAddCommandList = false;
+    if (!info.desc) info.desc = '';
+    if (!data.fromMe) data.fromMe = false;
+    if (!info.category) data.category = 'misc';
+    if(!info.filename) data.filename = "Not Provided";
+    commands.push(data);
+    return data;
+}
     ////////////////// COMMAND //////////////
   
 
@@ -504,8 +514,7 @@ socket.ev.on("messages.upsert", async (mek) => {
   if(!isOwner && userConfig.WORK_TYPE === "private") return
   if(!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return
   if(!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return
-   
-const events = require("./lib/command");
+  
       const cmdName = isCmd
         ? body.slice(1).trim().split(" ")[0].toLowerCase()
         : false;
