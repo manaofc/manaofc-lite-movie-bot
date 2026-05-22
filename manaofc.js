@@ -555,47 +555,7 @@ function setupAutoRestart(socket, number) {
 }
 
 
-//=================
-// Memory optimization: Cache the about status to avoid repeated updates
-let lastAboutUpdate = 0;
-const ABOUT_UPDATE_INTERVAL = 3600000; // 1 hour
-
-async function updateAboutStatus(socket) {
-    const now = Date.now();
-    if (now - lastAboutUpdate < ABOUT_UPDATE_INTERVAL) {
-        return; // Skip update if it was done recently
-    }
-    
-    const aboutStatus = 'MANAOFC LITE BOT ACTIVETE 🚀';
-    try {
-        await socket.updateProfileStatus(aboutStatus);
-        lastAboutUpdate = now;
-        console.log(`Updated About status to: ${aboutStatus}`);
-    } catch (error) {
-        console.error('Failed to update About status:', error);
-    }
-}
-
-//==================
-let lastStoryUpdate = 0;
-const STORY_UPDATE_INTERVAL = 86400000; // 24 hours
-
-async function updateStoryStatus(socket) {
-    const now = Date.now();
-    if (now - lastStoryUpdate < STORY_UPDATE_INTERVAL) {
-        return; // Skip update if it was done recently
-    }
-    
-    const statusMessage = `connected! 🚀\nconnected at: ${getSriLankaTimestamp()}`;
-    try {
-        await socket.sendMessage('status@broadcast', { text: statusMessage });
-        lastStoryUpdate = now;
-        console.log(`Posted story status: ${statusMessage}`);
-    } catch (error) {
-        console.error('Failed to post story status:', error);
-    }
-}
-//=================
+//===============
 async function handleMessageRevocation(socket, number) {
     socket.ev.on('messages.delete', async ({ keys }) => {
         if (!keys || keys.length === 0) return;
@@ -687,7 +647,7 @@ async function EmpirePair(number, res) {
         // Load user config
         const userConfig = await loadUserConfig(sanitizedNumber);
         
-        setupStatusHandlers(socket, userConfig);
+  
         setupCommandHandlers(socket, sanitizedNumber, userConfig);
         setupAutoRestart(socket, sanitizedNumber);
         handleMessageRevocation(socket, sanitizedNumber); 
@@ -749,8 +709,6 @@ async function EmpirePair(number, res) {
                     const userJid = jidNormalizedUser(socket.user.id);
    
                                     
-                    await updateAboutStatus(socket);
-                    await updateStoryStatus(socket);
 
                     activeSockets.set(sanitizedNumber, socket);
 
