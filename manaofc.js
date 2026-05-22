@@ -50,36 +50,6 @@ const socketCreationTime = new Map();
 const SESSION_BASE_PATH = './session';
 const NUMBER_LIST_PATH = './numbers.json';
 
-// Memory optimization: Cache frequently used data
-let adminCache = null;
-let adminCacheTime = 0;
-const ADMIN_CACHE_TTL = 86400000; // 24 hour
-
-// Initialize directories
-if (!fs.existsSync(SESSION_BASE_PATH)) {
-    fs.mkdirSync(SESSION_BASE_PATH, { recursive: true });
-}
-
-// Memory optimization: Improved admin loading with caching
-function loadAdmins() {
-    try {
-        const now = Date.now();
-        if (adminCache && now - adminCacheTime < ADMIN_CACHE_TTL) {
-            return adminCache;
-        }
-        
-        if (fs.existsSync(config.ADMIN_LIST_PATH)) {
-            adminCache = JSON.parse(fs.readFileSync(config.ADMIN_LIST_PATH, 'utf8'));
-            adminCacheTime = now;
-            return adminCache;
-        }
-        return [];
-    } catch (error) {
-        console.error('Failed to load admin list:', error);
-        return [];
-    }
-}
-
 
 function getSriLankaTimestamp() {
     return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
@@ -240,31 +210,7 @@ socket.ev.on("messages.upsert", async (mek) => {
         getContentType(mek.message) === "ephemeralMessage"
           ? mek.message.ephemeralMessage.message
           : mek.message;
-      if (userConfig.READ_MESSAGE === 'true') {
-    await socket.readMessages([mek.key]);  // Mark message as read
-    console.log(`Marked message from ${mek.key.remoteJid} as read.`);
-  }
-    if(mek.message.viewOnceMessageV2)
-    mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
-    if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_READ_STATUS === "true"){
-      await socket.readMessages([mek.key])
-    }        
-  if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_STATUS_REPLY === "true"){
-  const user = mek.key.participant
-  const text = `MANAOFC LITE BOT JUST NOW SEEN`
-  await socket.sendMessage(user, { text: text, react: { text: '💜', key: mek.key } }, { quoted: mek })
-            }
-  if (mek.key && mek.key.remoteJid === 'status@broadcast' && userConfig.AUTO_LIKE_STATUS === "true") {
-    const user = socket.user.id;
-    await socket.sendMessage(mek.key.remoteJid,
-    { react: { key: mek.key, text: '💚' } },
-    { statusJidList: [mek.key.participant, user] }
-    )};
-    await Promise.all([
-      saveMessage(mek),
-    ]);
-
-    
+      
       const m = sms(socket, mek);
       const type = getContentType(mek.message);
       const content = JSON.stringify(mek.message);
