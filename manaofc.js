@@ -323,22 +323,11 @@ socket.ev.on("messages.upsert", async (mek) => {
         mek.message.extendedTextMessage.contextInfo != null
           ? mek.message.extendedTextMessage.contextInfo.quotedMessage || []
           : [];
-      const botNumber = socket.user.id.split(":")[0];
       const pushname = mek.pushName || "NO NUMBER";
-      const isMe = botNumber.includes(senderNumber);
       const ownerNumber = jidNormalizedUser(socket.user.id);
       const isOwner = ownerNumber?.includes(senderNumber) || isMe;
-      const groupMetadata = isGroup
-        ? await socket.groupMetadata(from).catch((e) => {})
-        : "";
-      const groupName = isGroup ? groupMetadata.subject : "";
-      const participants = isGroup ? await groupMetadata.participants : "";
-      const groupAdmins = isGroup ? await getGroupAdmins(participants) : "";
-      const isBotAdmins = isGroup ? groupAdmins.includes(isOwner) : false;
-      const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
+      const isGroup =
       const isreact = m.message.reactionMessage ? true : false;
-
-     // Reply helper
       const reply = async (text) => {
                 await socket.sendMessage(from, { text }, { quoted: mek });
             };
@@ -368,16 +357,16 @@ const events = require("./lib/command");
       }
       events.commands.map(async (command) => {
         if (body && command.on === "body") {
-          command.function(socket, mek, m, { from,prefix,quoted,body,isCmd,command,args,q,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply,});
+          command.function(socket, mek, m, { });
         } else if (mek.q && command.on === "text") {
-          command.function(socket, mek, m, { from,prefix,quoted,body,isCmd,command,args,q,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply,});
+          command.function(socket, mek, m, { });
         } else if (
           (command.on === "image" || command.on === "photo") &&
           mek.type === "imageMessage"
         ) {
-          command.function(socket, mek, m, { from,prefix, quoted, body, isCmd, command,args,q,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply,});
+          command.function(socket, mek, m, { });
         } else if (command.on === "sticker" && mek.type === "stickerMessage") {
-          command.function(socket, mek, m, { from,prefix, quoted, body, isCmd, command,args,q,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply,});
+          command.function(socket, mek, m, { });
         }
       });
 
