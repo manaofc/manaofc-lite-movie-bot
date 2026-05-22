@@ -29,7 +29,7 @@ const {
 } = require('baileys');
 
 config = {
-  IMAGE: '',
+  IMAGE: 'https://files.catbox.moe/qlx0lp.png',
   PREFIX: '.',
   WORK_TYPE: 'private',
 };
