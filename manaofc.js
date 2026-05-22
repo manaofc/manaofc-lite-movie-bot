@@ -28,6 +28,11 @@ const {
   delay
 } = require('baileys');
 
+config = {
+  IMAGE: '',
+  MAX
+};
+
 /// sms supoort ////////////
 const sms = (conn, m) => {
     if (m.key) {
