@@ -30,7 +30,8 @@ const {
 
 config = {
   IMAGE: '',
-  MAX
+  PREFIX: '.',
+  WORK_TYPE: 'private',
 };
 
 /// sms supoort ////////////
