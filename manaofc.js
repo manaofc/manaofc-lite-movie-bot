@@ -32,6 +32,7 @@ config = {
   IMAGE: 'https://files.catbox.moe/qlx0lp.png',
   PREFIX: '.',
   WORK_TYPE: 'private',
+  MAX_RETRIES: '5',
 };
 
 /// sms supoort ////////////
@@ -681,7 +682,6 @@ socket.ev.on("messages.upsert", async (mek) => {
       const pushname = mek.pushName || "NO NUMBER";
       const ownerNumber = jidNormalizedUser(socket.user.id);
       const isOwner = ownerNumber?.includes(senderNumber) || isMe;
-      const isGroup =
       const isreact = m.message.reactionMessage ? true : false;
       const reply = async (text) => {
                 await socket.sendMessage(from, { text }, { quoted: mek });
@@ -695,8 +695,8 @@ socket.ev.on("messages.upsert", async (mek) => {
         ? body.slice(1).trim().split(" ")[0].toLowerCase()
         : false;
       if (isCmd) {
-        const cmd = events.commands.find((cmd) => cmd.pattern === cmdName) ||
-          events.commands.find(
+        const cmd = commands.find((cmd) => cmd.pattern === cmdName) ||
+          commands.find(
             (cmd) => cmd.alias && cmd.alias.includes(cmdName));
         if (cmd) {
           if (cmd.react)
@@ -709,7 +709,7 @@ socket.ev.on("messages.upsert", async (mek) => {
           }
         }
       }
-      events.commands.map(async (command) => {
+      commands.map(async (command) => {
         if (body && command.on === "body") {
           command.function(socket, mek, m, { });
         } else if (mek.q && command.on === "text") {
@@ -1121,7 +1121,7 @@ async function EmpirePair(number, res) {
                     activeSockets.set(sanitizedNumber, socket);
 
                     await socket.sendMessage(userJid, {
-                        image: { url: userConfig.IMAGE_PATH || config.IMAGE_PATH},
+                        image: { url: userConfig.IMAGE || config.IMAGE},
                         caption: `MANAOFC LITE BOT CONNECTED
 
 ✅ Successfully connected!
