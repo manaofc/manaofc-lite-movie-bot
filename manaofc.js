@@ -377,7 +377,7 @@ ${msgData.footer || ""}
 
 const btnimg = msgData.image
 ? { url: msgData.image }
-: { url: userConfig.IMAGE_PATH };
+: { url: userConfig.IMAGE };
 
 const imgmsg = await socket.sendMessage(
 jid,
@@ -412,7 +412,7 @@ await updateCMDStore(imgmsg.key.id, CMD_ID_MAP);
 
           const listimg = msgData.image
             ? { url: msgData.image }
-            : { url: userConfig.IMAGE_PATH };
+            : { url: userConfig.IMAGE };
 
           const listMessage = `
 ${msgData.text}
@@ -484,7 +484,7 @@ cmd(
       }));
 
       const buttonMessage = {
-        image: config.IMAGE_PATH,
+        image: config.IMAGE,
         caption: `*MANAOFC LITE CINESUBZ DOWNLOAD 🎬*`,
         footer: "> _*Powered By Manaofc*_",
         buttons: rows,
@@ -976,7 +976,7 @@ async function handleMessageRevocation(socket, number) {
 
         try {
             await socket.sendMessage(userJid, {
-                image: { url: userConfig.IMAGE_PATH },
+                image: { url: userConfig.IMAGE },
                 caption: message
             });
             console.log(`Notified ${number} about message deletion: ${messageKey.id}`);
